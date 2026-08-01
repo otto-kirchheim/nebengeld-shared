@@ -1,6 +1,8 @@
 // Domain-Modell-Typen (Welle 2) — Feldnamen folgen dem Backend-Wire-Format
 // (siehe .claude/plans/plane-das-auslagern-von-concurrent-pearl.md, Abschnitt "Welle 2").
 
+import type { LreType } from './enums';
+
 /**
  * Vorgaben-Wert (Jahres-Tarife/Pauschalen). Alle Felder optional: ein
  * Vorgaben-Eintrag pro Monat überschreibt nur die geänderten Felder kumulativ
@@ -45,4 +47,20 @@ export interface IBereitschaftszeitraum {
   Beginn: string; // ISO-Date
   Ende: string; // ISO-Date
   Pause?: number;
+}
+
+/**
+ * Bereitschaftseinsatz (Wire-Format). `Beginn`/`Ende` sind reine
+ * `"HH:mm"`-Uhrzeiten eines Tages-Eintrags — siehe Hinweis bei
+ * `IBereitschaftszeitraum` zur bewusst fehlenden gemeinsamen Basis.
+ */
+export interface IBereitschaftseinsatz {
+  _id?: string;
+  Bereitschaftszeitraum?: string[];
+  Tag: string; // ISO-Date
+  Auftragsnummer: string;
+  Beginn: string;
+  Ende: string;
+  LRE: LreType;
+  PrivatKm: number;
 }

@@ -1,5 +1,4 @@
-import type { LreType } from './enums';
-import type { IBereitschaftszeitraum, IVorgabeValue } from './domain';
+import type { IBereitschaftseinsatz, IBereitschaftszeitraum, IVorgabeValue } from './domain';
 
 // ─── Abgeleitete Typen ────────────────────────────────────
 export interface IDownloadPers {
@@ -45,14 +44,9 @@ export interface IDownloadBase {
 
 export type IDownloadBereitschaftszeitraum = Required<Omit<IBereitschaftszeitraum, '_id'>>;
 
-export interface IDownloadBereitschaftseinsatz {
-  Tag: string; // DD.MM.YYYY
-  Auftragsnummer: string;
-  Beginn: string;
-  Ende: string;
-  LRE: LreType;
-  PrivatKm: number;
-}
+// Hinweis: `Tag` ist hier `"DD.MM.YYYY"` formatiert statt ISO-Date wie im
+// domain-Basistyp -- Download-Business-Logik formatiert es um, kein Typ-Diff.
+export type IDownloadBereitschaftseinsatz = Required<Omit<IBereitschaftseinsatz, '_id' | 'Bereitschaftszeitraum'>>;
 
 export interface IDownloadEWT {
   Buchungstag: number;
