@@ -1,4 +1,4 @@
-import type { IBereitschaftseinsatz, IBereitschaftszeitraum, IVorgabeValue } from './domain';
+import type { IBereitschaftseinsatz, IBereitschaftszeitraum, INebengeld, IVorgabeValue } from './domain';
 
 // ─── Abgeleitete Typen ────────────────────────────────────
 export interface IDownloadPers {
@@ -63,13 +63,7 @@ export interface IDownloadEWT {
   berechnen: boolean;
 }
 
-export interface IDownloadNebengeld {
-  Tag: string;
-  Beginn: string;
-  Ende: string;
-  Auftragsnummer: string;
-  Zulagen: { Typ: string; Wert: number }[];
-}
+export type IDownloadNebengeld = Required<Omit<INebengeld, '_id' | 'EWT'>>;
 
 // ─── Komplette Download-Body-Typen ───────────────────────
 

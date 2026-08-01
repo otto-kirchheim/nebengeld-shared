@@ -90,3 +90,27 @@ export interface IEinsatzwechseltaetigkeit {
   anWE?: string;
   berechnen?: boolean;
 }
+
+/** Einzelne Zulage innerhalb eines Nebengeld-Eintrags. */
+export interface IZulage {
+  Typ: string;
+  Wert: number;
+}
+
+/**
+ * Nebengeld (Wire-Format). `Beginn`/`Ende` sind reine `"HH:mm"`-Uhrzeiten
+ * eines Tages-Eintrags — siehe Hinweis bei `IBereitschaftszeitraum` zur
+ * bewusst fehlenden gemeinsamen Basis. `zulagenAnzeigeN` (abgeleitetes
+ * Anzeigefeld für die Frontend-Tabellen-UI) ist bewusst nicht Teil dieses
+ * Typs — existiert nur lokal im Frontend, kein Backend-Gegenstück.
+ */
+export interface INebengeld {
+  _id?: string;
+  /** null = EWT-Verknüpfung explizit entfernen (Backend übersetzt zu $unset) */
+  EWT?: string | null;
+  Tag: string; // ISO-Date
+  Beginn: string;
+  Ende: string;
+  Auftragsnummer?: string;
+  Zulagen: IZulage[];
+}
