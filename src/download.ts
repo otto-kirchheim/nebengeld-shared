@@ -1,5 +1,5 @@
 import type { LreType } from './enums';
-import type { IVorgabeValue } from './domain';
+import type { IBereitschaftszeitraum, IVorgabeValue } from './domain';
 
 // ─── Abgeleitete Typen ────────────────────────────────────
 export interface IDownloadPers {
@@ -43,11 +43,7 @@ export interface IDownloadBase {
 
 // ─── Daten-Formate pro Ressource ─────────────────────────
 
-export interface IDownloadBereitschaftszeitraum {
-  Beginn: string; // ISO-Date
-  Ende: string; // ISO-Date
-  Pause: number;
-}
+export type IDownloadBereitschaftszeitraum = Required<Omit<IBereitschaftszeitraum, '_id'>>;
 
 export interface IDownloadBereitschaftseinsatz {
   Tag: string; // DD.MM.YYYY

@@ -32,3 +32,17 @@ export interface IVorgabeEntry {
   key: number;
   value: IVorgabeValue;
 }
+
+/**
+ * Bereitschaftszeitraum (Wire-Format). `Beginn`/`Ende` sind volle
+ * ISO-Zeitstempel (mehrtägiger Zeitraum) — anders als bei Bereitschaftseinsatz
+ * oder Nebengeld, wo `Beginn`/`Ende` reine `"HH:mm"`-Uhrzeiten eines
+ * Tages-Eintrags sind. Bewusst kein gemeinsamer Basis-Typ über Ressourcen
+ * hinweg (siehe Plan, Abschnitt "Namens-Kollisions-Check").
+ */
+export interface IBereitschaftszeitraum {
+  _id?: string;
+  Beginn: string; // ISO-Date
+  Ende: string; // ISO-Date
+  Pause?: number;
+}
