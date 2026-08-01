@@ -1,7 +1,7 @@
 // Domain-Modell-Typen (Welle 2) — Feldnamen folgen dem Backend-Wire-Format
 // (siehe .claude/plans/plane-das-auslagern-von-concurrent-pearl.md, Abschnitt "Welle 2").
 
-import type { LreType } from './enums';
+import type { LreType, TarifBesoldung } from './enums';
 
 /**
  * Vorgaben-Wert (Jahres-Tarife/Pauschalen). Alle Felder optional: ein
@@ -138,12 +138,14 @@ export interface IPers {
   ErsteTkgStAdresse: string;
   Bundesland?: string;
   Betrieb: string;
-  OE: string;
+  /** Organisationseinheit als Hierarchie-Ebenen, z.B. ['I','IW','MI','N','KSL','IL','03'] */
+  OE: string[];
   Gewerk: string;
   kmArbeitsort: number;
   nBhf: string;
   kmnBhf: number;
-  TB: string;
+  /** Schlüssel in die Geld-Vorgaben — siehe `TB_VALUES` in `enums.ts`. */
+  TB: TarifBesoldung;
 }
 
 export interface IFahrzeit {

@@ -13,7 +13,8 @@ export interface IDownloadPers {
   ErsteTkgStAdresse: string;
   Bundesland?: string;
   Betrieb: string;
-  OE: string;
+  /** Organisationseinheit als Hierarchie-Ebenen; fuer die PDF-Zelle zusammengefuegt */
+  OE: string[];
   Gewerk: string;
   kmArbeitsort: number;
   nBhf: string;

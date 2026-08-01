@@ -14,6 +14,18 @@ export const ROLE_HIERARCHY: Record<Role, number> = {
   [Role.SUPER_ADMIN]: 4,
 };
 
+// ─── Tarif-/Besoldungsgruppe (Pers.TB) ───────────────────
+/**
+ * Zulässige Werte für `Pers.TB`. Der Wert wird in der Berechnung als Schlüssel
+ * in die Geld-Vorgaben benutzt (`IVorgabeValue[TB]`) — ein abweichender Text
+ * ergibt dort `undefined` und damit NaN-Beträge. Deshalb ist die Liste
+ * verbindlich und wird in Zod, Mongoose und den Auswahlfeldern der Oberfläche
+ * aus dieser einen Quelle gespeist.
+ */
+export const TB_VALUES = ['Besoldungsgruppe A 8', 'Besoldungsgruppe A 9', 'Tarifkraft'] as const;
+
+export type TarifBesoldung = (typeof TB_VALUES)[number];
+
 // ─── LRE-Typen (Bereitschaftseinsatz) ────────────────────
 export enum LreType {
   LRE_1 = 'LRE 1',
