@@ -1,5 +1,34 @@
+export const ZULAGEN_CODES = [
+  '040',
+  '811',
+  '818',
+  '819',
+  '820',
+  '821',
+  '822',
+  '823',
+  '824',
+  '826',
+  '827',
+  '828',
+  '831',
+  '832',
+  '834',
+  '835',
+  '837',
+  '838',
+  '839',
+  '841',
+  '842',
+  '843',
+  '846',
+  '218',
+] as const;
+
+export type ZulagenCode = (typeof ZULAGEN_CODES)[number];
+
 export interface IZulageCatalogItem {
-  code: string;
+  code: ZulagenCode;
   paymentHint: string;
   label: string;
   shortLabel: string;
@@ -242,33 +271,3 @@ export const ZULAGEN_CATALOG: IZulageCatalogItem[] = [
     entryRule: SINGLE_PIECE_PER_DAY_RULE,
   },
 ];
-
-// ─── Abgeleitete Code-Liste (ersetzt Backend ZULAGEN_CODES/VALID_ZULAGE_CODES) ───
-export const ZULAGEN_CODES = [
-  '040',
-  '811',
-  '818',
-  '819',
-  '820',
-  '821',
-  '822',
-  '823',
-  '824',
-  '826',
-  '827',
-  '828',
-  '831',
-  '832',
-  '834',
-  '835',
-  '837',
-  '838',
-  '839',
-  '841',
-  '842',
-  '843',
-  '846',
-  '218',
-] as const;
-
-export type ZulagenCode = (typeof ZULAGEN_CODES)[number];
