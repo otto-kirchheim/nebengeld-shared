@@ -1,6 +1,7 @@
 import type { LreType } from './enums';
+import type { IVorgabeValue } from './domain';
 
-// ─── Abgeleitete Typen (eigenständig, da Wave 1 keine Domain-Model-Typen teilt) ───
+// ─── Abgeleitete Typen ────────────────────────────────────
 export interface IDownloadPers {
   Vorname: string;
   Nachname: string;
@@ -27,26 +28,7 @@ export interface IDownloadFahrzeit {
   value: string;
 }
 
-export interface IDownloadVorgabenGeld {
-  BE14?: number;
-  BE8?: number;
-  'Besoldungsgruppe A 8'?: number;
-  'Besoldungsgruppe A 9'?: number;
-  A?: number;
-  B?: number;
-  C?: number;
-  Fahrentsch?: number;
-  SIPO?: number;
-  LRE1?: number;
-  LRE2?: number;
-  LRE3?: number;
-  PrivatPKWTarif?: number;
-  PrivatPKWBeamter?: number;
-  Tarifkraft?: number;
-  TE14?: number;
-  TE24?: number;
-  TE8?: number;
-}
+export type IDownloadVorgabenGeld = IVorgabeValue;
 
 // ─── Gemeinsamer Download-Body (Basis) ───────────────────
 export interface IDownloadBase {
