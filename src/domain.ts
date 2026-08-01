@@ -64,3 +64,29 @@ export interface IBereitschaftseinsatz {
   LRE: LreType;
   PrivatKm: number;
 }
+
+/**
+ * Einsatzwechseltätigkeit (Wire-Format). `Buchungstag` bleibt hier bewusst
+ * `string` (ISO-Date, wie das Backend-Modell) -- die Download-DTO
+ * (`IDownloadEWT`) sendet es abweichend als zweistelligen Tages-String; diese
+ * vorbestehende Diskrepanz ist dokumentiert und nicht Teil dieser Migration
+ * (siehe Welle 1, `IEwtDownloadBody`). `abWE`/`ab1E`/`anEE`/`beginE`/`endeE`/
+ * `abEE`/`an1E`/`anWE` trugen im Frontend bereits dieselben Namen wie im
+ * Backend -- kein Rename nötig, nur hier mit aufgenommen.
+ */
+export interface IEinsatzwechseltaetigkeit {
+  _id?: string;
+  Tag: string; // ISO-Date
+  Buchungstag?: string; // ISO-Date
+  Einsatzort?: string;
+  Schicht: string;
+  abWE?: string;
+  ab1E?: string;
+  anEE?: string;
+  beginE?: string;
+  endeE?: string;
+  abEE?: string;
+  an1E?: string;
+  anWE?: string;
+  berechnen?: boolean;
+}
