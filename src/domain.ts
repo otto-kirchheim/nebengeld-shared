@@ -114,3 +114,40 @@ export interface INebengeld {
   Auftragsnummer?: string;
   Zulagen: IZulage[];
 }
+
+/**
+ * Persönliche Stammdaten (Teil von UserProfile, Wire-Format). Nur `Pers` und
+ * `Fahrzeit` sind hier abgebildet: ihre Blattfelder sind 1:1 identisch zum
+ * Frontend (keine Optionalitäts-Abweichung). `Arbeitszeit`/`VorgabenB` bleiben
+ * bewusst außen vor -- das Frontend hält dafür eine eigene, vollständig
+ * hydrierte Form (`IVorgabenUaZ`/`IVorgabenUvorgabenB` in
+ * `core/types/IVorgabenU.ts`), die zwar dieselben Feldnamen trägt, aber
+ * Felder garantiert setzt, die im Backend-Wire-Format optional sind (z.B.
+ * `spaet`/`nacht`/`sonder`, `aktiv`) -- dieselbe Art bewusst nicht
+ * vereinheitlichter Typ-Divergenz wie bei `Beginn`/`Ende` oben, nur diesmal
+ * bei Optionalität statt Format.
+ */
+export interface IPers {
+  Vorname: string;
+  Nachname: string;
+  PNummer: string;
+  Telefon: string;
+  Adress1: string;
+  Adress2?: string;
+  ErsteTkgSt: string;
+  ErsteTkgStAdresse: string;
+  Bundesland?: string;
+  Betrieb: string;
+  OE: string;
+  Gewerk: string;
+  kmArbeitsort: number;
+  nBhf: string;
+  kmnBhf: number;
+  TB: string;
+}
+
+export interface IFahrzeit {
+  key: string;
+  text: string;
+  value: string;
+}
