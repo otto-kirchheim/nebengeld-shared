@@ -44,25 +44,30 @@ export interface SeitenDef {
   /** je Seite unterschiedlich: voller Kopf vs. schmale Kennzeile vs. leer */
   kopf: Record<string, Feld>;
   seitenfuss?: Record<string, Feld>;
-  /** nur auf der Abschlussseite gesetzt */
+  /** Fuß-/Summenfelder — wird auf JEDER Seite gezeichnet, die dieses Feld definiert (meist die
+   * letzte Seite, bei Bereitschaft aber bewusst auf der ersten — datengetrieben, kein Sonderfall
+   * im Renderer). */
   fuss?: Record<string, Feld>;
   signaturBild?: { x: number; y: number; w: number; h: number };
 }
 
 export interface Layout {
+  /** Eine PDF-Datei für die ganze Version — die ursprüngliche Aufteilung in zwei Dateien
+   * (einseitig/mehrseitig) war nur wegen Kandidat C (pyHanko-Signaturfeld-Namenskollision)
+   * nötig und entfällt unter Kandidat E (siehe Plan, Phase 5). */
   template: string;
-  /** Seiten in Reihenfolge; die letzte trägt Fuß und Signaturblock */
-  seiten: SeitenDef[];
-  /** Index der Seite, die bei Überlauf wiederholt wird */
-  wiederholSeite?: number;
+  /** Wird immer genau einmal gerendert. */
+  ersteSeite: SeitenDef;
+  /** Wird bei Zeilenüberlauf beliebig oft wiederholt; fehlt sie und reichen die Zeilen nicht
+   * auf `ersteSeite`, wirft `verteile()`. */
+  weitereSeite?: SeitenDef;
 }
 
 export interface Version {
   version: string;
   gueltigVon: string;
   gueltigBis: string | null;
-  einseitig: Layout;
-  mehrseitig: Layout;
+  layout: Layout;
   zeilen: { quelle: string; hoehe: number; spalten: Spalte[] };
 }
 

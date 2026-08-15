@@ -2,15 +2,14 @@ import { describe, expect, it } from 'bun:test';
 import { resolve } from '../../src/formular/resolve';
 import type { Layout, Registry } from '../../src/formular/types';
 
-const leeresLayout: Layout = { template: '', seiten: [] };
+const leeresLayout: Layout = { template: '', ersteSeite: { quelle: 0, maxZeilen: 1, startY: 0, kopf: {} } };
 
 function macheVersion(version: string, gueltigVon: string, gueltigBis: string | null) {
   return {
     version,
     gueltigVon,
     gueltigBis,
-    einseitig: leeresLayout,
-    mehrseitig: leeresLayout,
+    layout: leeresLayout,
     zeilen: { quelle: 'zeilen', hoehe: 12, spalten: [] },
   };
 }
