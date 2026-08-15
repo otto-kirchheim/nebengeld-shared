@@ -11,8 +11,9 @@
     "resolveJsonModule": true,
     "declaration": true,
     "noEmit": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "types": ["bun"]
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "tests/**/*"],
   "exclude": ["node_modules"]
 }
