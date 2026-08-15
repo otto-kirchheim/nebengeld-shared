@@ -146,10 +146,33 @@ export interface IPers {
   kmnBhf: number;
   /** Schlüssel in die Geld-Vorgaben — siehe `TB_VALUES` in `enums.ts`. */
   TB: TarifBesoldung;
+  /** Grundtätigkeit des Mitarbeiters (Kopf-Feld Entgeltausgleich-Formular), z.B. "Signalmechaniker RBEG". Optional: Bestandsnutzer ohne EA-Nutzung haben es (noch) nicht gepflegt. */
+  Taetigkeit?: string;
+  /** Entgeltgruppe der Grundtätigkeit (Kopf-Feld Entgeltausgleich-Formular), z.B. "105". Optional, siehe `Taetigkeit`. */
+  Entgeltgruppe?: string;
 }
 
 export interface IFahrzeit {
   key: string;
   text: string;
   value: string;
+}
+
+/**
+ * Entgeltausgleich (Wire-Format, §6 FGrTV). `Dauer` ist eine reine
+ * `"HH:mm"`-Zeitspanne (geleistete höherwertige Arbeitszeit), kein
+ * `Beginn`/`Ende`-Paar wie bei Nebengeld -- siehe Hinweis bei
+ * `IBereitschaftszeitraum` zur bewusst fehlenden gemeinsamen Basis.
+ * `Taetigkeit`/`Entgeltgruppe` hier sind Tages-Felder (welche höherwertige
+ * Tätigkeit an diesem Tag ausgeübt wurde) -- unabhängig von den
+ * gleichnamigen Kopf-Feldern in `IPers` (Grundtätigkeit des Mitarbeiters).
+ */
+export interface IEntgeltausgleich {
+  _id?: string;
+  /** null = EWT-Verknüpfung explizit entfernen (Backend übersetzt zu $unset) */
+  EWT?: string | null;
+  Tag: string; // ISO-Date
+  Dauer: string; // "HH:mm"
+  Taetigkeit: string;
+  Entgeltgruppe: string;
 }

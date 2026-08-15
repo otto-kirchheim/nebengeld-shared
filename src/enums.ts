@@ -36,7 +36,7 @@ export enum LreType {
 }
 
 // ─── Ressourcen-Kürzel (Frontend-CRUD-Tabellen) ──────────
-export type ResourceKey = 'BZ' | 'BE' | 'EWT' | 'N' | 'settings';
+export type ResourceKey = 'BZ' | 'BE' | 'EWT' | 'N' | 'EA' | 'settings';
 
 // ─── Speicher-Status (Frontend AutoSave) ─────────────────
 export type SaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error' | 'blocked';

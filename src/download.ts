@@ -1,4 +1,4 @@
-import type { IBereitschaftseinsatz, IBereitschaftszeitraum, INebengeld, IVorgabeValue } from './domain';
+import type { IBereitschaftseinsatz, IBereitschaftszeitraum, IEntgeltausgleich, INebengeld, IVorgabeValue } from './domain';
 
 // ─── Abgeleitete Typen ────────────────────────────────────
 export interface IDownloadPers {
@@ -20,6 +20,8 @@ export interface IDownloadPers {
   nBhf: string;
   kmnBhf: number;
   TB: string;
+  Taetigkeit?: string;
+  Entgeltgruppe?: string;
 }
 
 export interface IDownloadFahrzeit {
@@ -66,6 +68,8 @@ export interface IDownloadEWT {
 
 export type IDownloadNebengeld = Required<Omit<INebengeld, '_id' | 'EWT'>>;
 
+export type IDownloadEA = Required<Omit<IEntgeltausgleich, '_id' | 'EWT'>>;
+
 // ─── Komplette Download-Body-Typen ───────────────────────
 
 export interface IBereitschaftszeitraumDownloadBody extends IDownloadBase {
@@ -84,5 +88,11 @@ export interface IEwtDownloadBody extends IDownloadBase {
 export interface INebengeldDownloadBody extends IDownloadBase {
   Daten: {
     N: IDownloadNebengeld[];
+  };
+}
+
+export interface IEntgeltausgleichDownloadBody extends IDownloadBase {
+  Daten: {
+    EA: IDownloadEA[];
   };
 }
