@@ -1,12 +1,43 @@
-import type { FormatName, OpName, Zeile, ZeilenOpName } from './types';
+import type { FormatName, OpName, Zeile, ZeilenBerechnet, ZeilenOpName } from './types';
 
 type Aggregator = (rows: Zeile[], feld?: string) => number;
 
+/**
+ * Zahlwert eines Zellinhalts. `"HH:mm"` wird als Minuten gelesen, alles andere über `Number`.
+ * Ohne diesen Umweg wäre `Number("02:30")` NaN und jede Summe über eine Dauer-Spalte still 0 —
+ * genau der Fall, den die Formulare für die Stundensumme brauchen.
+ */
+export function alsZahl(v: unknown): number {
+  if (NUR_UHRZEIT.test(String(v ?? ''))) return alsMinuten(v);
+  return Number(v) || 0;
+}
+
 export const OPS: Record<OpName, Aggregator> = {
-  summe: (rows, feld) => rows.reduce((s, r) => s + (Number(r[feld!]) || 0), 0),
+  summe: (rows, feld) => rows.reduce((s, r) => s + alsZahl(r[feld!]), 0),
   anzahl: rows => rows.length,
-  max: (rows, feld) => Math.max(0, ...rows.map(r => Number(r[feld!]) || 0)),
+  max: (rows, feld) => Math.max(0, ...rows.map(r => alsZahl(r[feld!]))),
+  /**
+   * Jüngster Datumswert in `feld`, als Zeitstempel in Millisekunden — `0`, wenn es keine lesbaren
+   * Werte gibt. Bewusst eine Zahl statt eines Datums-Strings: damit bleibt der Rückgabetyp
+   * einheitlich und jedes `FormatName`-Datumsformat greift unverändert (`new Date(ms)`).
+   * `max` taugt dafür nicht, weil es `Number("2026-03-15")` rechnet und damit `NaN` bekäme.
+   */
+  letztesDatum: (rows, feld) => Math.max(0, ...rows.map(r => alsDatum(r[feld!])?.getTime() ?? 0)),
 };
+
+const TAG_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Wendet die Frist aus `Berechnet.maxTage` auf ein `letztesDatum` an: liegt der jüngste Eintrag
+ * höchstens `maxTage` zurück, gilt er, sonst `heute`. Ohne `maxTage` bleibt es beim Eintrag.
+ * Ein in der Zukunft liegender Eintrag zählt als aktuell — beim Vorausfüllen kommender Termine
+ * wäre ein Rückfall auf heute unerwartet.
+ */
+export function datumMitFrist(letztes: number, maxTage: number | undefined, heute: Date): number {
+  if (maxTage === undefined) return letztes;
+  if (letztes === 0) return heute.getTime();
+  return heute.getTime() - letztes <= maxTage * TAG_MS ? letztes : heute.getTime();
+}
 
 /**
  * Liest `"HH:mm"` oder einen ISO-Zeitstempel als Minuten seit Mitternacht. Basis für
@@ -17,6 +48,18 @@ export function alsMinuten(v: unknown): number {
   if (treffer) return Number(treffer[1]) * 60 + Number(treffer[2]);
   const d = new Date(v as string);
   return Number.isNaN(d.getTime()) ? 0 : d.getHours() * 60 + d.getMinutes();
+}
+
+/**
+ * Liest einen vollständigen Zeitstempel als absolute Minuten. Basis für `zeitspanne` — anders als
+ * `alsMinuten` geht dabei der Tag NICHT verloren, ein Bereitschaftszeitraum über mehrere Tage
+ * kommt also korrekt heraus. Reine `"HH:mm"`-Werte fallen auf `alsMinuten` zurück, damit eine
+ * versehentlich mit Uhrzeiten befüllte `zeitspanne` innerhalb eines Tages trotzdem stimmt.
+ */
+export function alsZeitstempelMinuten(v: unknown): number {
+  if (NUR_UHRZEIT.test(String(v ?? ''))) return alsMinuten(v);
+  const d = new Date(v as string);
+  return Number.isNaN(d.getTime()) ? 0 : Math.round(d.getTime() / 60_000);
 }
 
 const differenz = (werte: number[]): number => (werte.length === 0 ? 0 : werte.slice(1).reduce((a, b) => a - b, werte[0]!));
@@ -32,7 +75,42 @@ export const ZEILEN_OPS: Record<ZeilenOpName, (werte: number[]) => number> = {
     const d = differenz(werte);
     return d < 0 ? d + 24 * 60 : d;
   },
+  /** Zeitstempel-Differenz in Minuten, darf über Tage laufen — keine Mitternachts-Korrektur. */
+  zeitspanne: differenz,
 };
+
+/** Wandelt die Blatt-Operanden eines Operators in Zahlen — Zeit-Ops brauchen eigene Parser. */
+function leseOperand(op: ZeilenOpName): (v: unknown) => number {
+  if (op === 'zeitdifferenz') return alsMinuten;
+  if (op === 'zeitspanne') return alsZeitstempelMinuten;
+  // `alsZahl` statt `Number`, damit auch hier eine gespeicherte Dauer wie `"02:30"` mitrechnet.
+  return alsZahl;
+}
+
+/**
+ * Wertet eine Zeilenrechnung gegen EINE Datenzeile aus. Operanden dürfen selbst Rechnungen sein
+ * (geklammerte Zwischenrechnung) — dadurch sind gemischte Rechnungen wie Ende − Beginn + Pause
+ * darstellbar, ohne eine implizite Vorrangregel einzuführen. Jeder Knoten liest seine eigenen
+ * Blatt-Operanden; verschachtelte Knoten liefern bereits Zahlen (Zeit-Ops immer Minuten).
+ */
+export function berechneZeile(b: ZeilenBerechnet, zeile: Zeile): number {
+  const lies = leseOperand(b.op);
+  const werte = b.operanden.map(operand => {
+    if (typeof operand === 'number') return operand;
+    if (typeof operand === 'string') return lies(zeile[operand]) || 0;
+    return berechneZeile(operand, zeile);
+  });
+  return ZEILEN_OPS[b.op](werte);
+}
+
+/** Alle Zeilen-Feldnamen einer (ggf. verschachtelten) Rechnung — für Testdaten und Editor-Hinweise. */
+export function operandenFelder(b: ZeilenBerechnet): string[] {
+  return b.operanden.flatMap(operand => {
+    if (typeof operand === 'string') return [operand];
+    if (typeof operand === 'number') return [];
+    return operandenFelder(operand);
+  });
+}
 
 /** `"HH:mm"`-Strings kommen so aus den Download-Bodies und dürfen nicht durch `new Date()` laufen. */
 const NUR_UHRZEIT = /^(\d{1,2}):(\d{2})/;

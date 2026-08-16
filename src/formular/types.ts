@@ -15,8 +15,8 @@ export type FormatName =
   | 'stunden'
   | 'liste'
   | 'grossbuchstaben';
-export type OpName = 'summe' | 'anzahl' | 'max';
-export type ZeilenOpName = 'produkt' | 'summe' | 'differenz' | 'quotient' | 'zeitdifferenz';
+export type OpName = 'summe' | 'anzahl' | 'max' | 'letztesDatum';
+export type ZeilenOpName = 'produkt' | 'summe' | 'differenz' | 'quotient' | 'zeitdifferenz' | 'zeitspanne';
 
 export type Zeile = Record<string, string | number | null | undefined>;
 export type Daten = Record<string, unknown>;
@@ -34,16 +34,37 @@ export interface Berechnet {
    * Ohne Angabe laufen die Zeilen aller Tabellen zusammen in die Rechnung.
    */
   tabelle?: string;
+  /**
+   * Nur für `letztesDatum`: Höchstalter des jüngsten Eintrags in Tagen. Ist er älter — oder gibt es
+   * gar keine Zeilen —, wird stattdessen das heutige Datum genommen. Gedacht für das Datum neben
+   * der Unterschrift: unterschrieben wird am Tag der letzten Leistung, sofern die noch nicht lange
+   * zurückliegt, sonst heute. Ohne Angabe bleibt es immer beim letzten Eintrag.
+   */
+  maxTage?: number;
 }
 
 /**
- * Wert aus anderen Feldern DERSELBEN Datenzeile; Operanden sind Zeilen-Feldnamen oder Konstanten.
- * `zeitdifferenz` liest die Operanden als Uhrzeiten (`"HH:mm"` oder ISO) und liefert Minuten —
- * zusammen mit `format: 'stunden'` ergibt das eine Dauer wie `2:30` (z.B. Ende minus Beginn).
+ * Operand einer Zeilenrechnung: Zeilen-Feldname, feste Zahl — oder eine geklammerte
+ * Zwischenrechnung. Die Verschachtelung ersetzt Punkt-vor-Strich: die Gruppierung steht explizit
+ * in der Struktur, es gibt keine implizite Vorrangregel, die man falsch erwarten könnte.
+ */
+export type ZeilenOperand = string | number | ZeilenBerechnet;
+
+/**
+ * Wert aus anderen Feldern DERSELBEN Datenzeile.
+ *
+ * Zeit-Operatoren liefern beide Minuten (mit `format: 'stunden'` also eine Dauer wie `2:30`),
+ * unterscheiden sich aber im Bezug: `zeitdifferenz` rechnet mit Uhrzeiten EINES Tages (`"HH:mm"`)
+ * und ergänzt über Mitternacht 24 h; `zeitspanne` rechnet mit vollständigen Zeitstempeln und darf
+ * deshalb über mehrere Tage laufen (Bereitschaftszeitraum). Der falsche Operator liefert stille
+ * Fehlwerte — ein mehrtägiger Zeitraum käme über `zeitdifferenz` als Rest unter 24 h heraus.
+ *
+ * Gemischte Rechnungen entstehen durch Schachtelung, z.B. Ende − Beginn + Pause als
+ * `{ op: 'summe', operanden: [{ op: 'zeitspanne', operanden: ['Ende', 'Beginn'] }, 'Pause'] }`.
  */
 export interface ZeilenBerechnet {
   op: ZeilenOpName;
-  operanden: (string | number)[];
+  operanden: ZeilenOperand[];
 }
 
 /**
