@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { pruefeIntervalle } from '../../src/formular/pruefeIntervalle';
 import type { Layout, Registry } from '../../src/formular/types';
 
-const leeresLayout: Layout = { template: '', ersteSeite: { quelle: 0, maxZeilen: 1, startY: 0, kopf: {} } };
+const leeresLayout: Layout = { template: '', ersteSeite: { quelle: 0, bereiche: [{ tabelle: 'haupt', startY: 0, maxZeilen: 1 }], felder: {} } };
 
 function macheVersion(version: string, gueltigVon: string, gueltigBis: string | null) {
   return {
@@ -10,7 +10,7 @@ function macheVersion(version: string, gueltigVon: string, gueltigBis: string | 
     gueltigVon,
     gueltigBis,
     layout: leeresLayout,
-    zeilen: { quelle: 'zeilen', hoehe: 12, spalten: [] },
+    tabellen: { haupt: { quelle: 'zeilen', hoehe: 12, spalten: [] } },
   };
 }
 
