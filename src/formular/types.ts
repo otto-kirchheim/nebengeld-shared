@@ -9,6 +9,7 @@ export type FormatName =
   | 'datum'
   | 'datumKurz'
   | 'tag'
+  | 'tagZweistellig'
   | 'wochentag'
   | 'monatJahr'
   | 'uhrzeit'
@@ -18,8 +19,16 @@ export type FormatName =
 export type OpName = 'summe' | 'anzahl' | 'max' | 'letztesDatum';
 export type ZeilenOpName = 'produkt' | 'summe' | 'differenz' | 'quotient' | 'zeitdifferenz' | 'zeitspanne';
 
-export type Zeile = Record<string, string | number | null | undefined>;
+/**
+ * Eine Datenzeile, wie sie aus dem Download-Body kommt. Werte sind bewusst `unknown`: neben Text
+ * und Zahl steckt dort auch Verschachteltes — bei EZ trägt jede Zeile unter `Zulagen` eine Liste
+ * von Einträgen, die erst über `ListenGruppe` zu Spalten wird.
+ */
+export type Zeile = Record<string, unknown>;
 export type Daten = Record<string, unknown>;
+
+/** Drehung des Textes in einer Zelle, in Grad gegen den Uhrzeigersinn. */
+export type Drehung = 0 | 90 | 180 | 270;
 
 export interface Berechnet {
   op: OpName;
@@ -68,13 +77,24 @@ export interface ZeilenBerechnet {
 }
 
 /**
- * Bedingter Zellinhalt: steht in `feld` einer der `werte`, erscheint `dann`, sonst bleibt die Zelle
- * leer. Deckt Ankreuz-Spalten ab — bei Bereitschaft je eine Spalte pro LRE-Stufe, die nur ein `X`
- * trägt, wenn die Zeile genau diese Stufe hat.
+ * Bedingter Zellinhalt: erscheint `dann`, sonst bleibt die Zelle leer. Deckt Ankreuz-Spalten ab —
+ * bei Bereitschaft je eine Spalte pro LRE-Stufe, die nur ein `X` trägt, wenn die Zeile genau diese
+ * Stufe hat.
+ *
+ * Geprüfter Wert: `feld` (Zeilen-Feldname) ODER `berechnet` (Rechnung über Felder derselben Zeile,
+ * z.B. eine Dauer aus zwei Uhrzeiten) — genau eines ist gesetzt.
+ *
+ * Vergleich: `werte` (Kreuz, wenn der Wert einer davon ist) ODER `bereich` (Kreuz, wenn der Wert im
+ * Intervall liegt, `von` einschließlich, `bis` ausschließlich — z.B. Einsatzdauer ab 8:00 bis vor
+ * 14:00, oder Privat-km ab 5 bis 20) — genau eines ist gesetzt. Gelesen über `alsVergleichswert`:
+ * passt sich dem jeweiligen Wert an (Zahl, `"HH:mm"` oder voller Zeitstempel), keine feste Annahme
+ * über die Feldart.
  */
 export interface Bedingung {
-  feld: string;
-  werte: (string | number)[];
+  feld?: string;
+  berechnet?: ZeilenBerechnet;
+  werte?: (string | number)[];
+  bereich?: { von: string | number; bis: string | number };
   dann: string;
 }
 
@@ -112,8 +132,45 @@ export interface Feld {
   quellen?: string[];
   /** Trennzeichen für `quellen`, z.B. `", "`, `" / "`, `"; "`. Ohne Angabe ein Leerzeichen. */
   trenner?: string;
+  /**
+   * Überschrift eines dynamischen Spaltenplatzes: zeigt den Schlüssel, der auf diesem Platz
+   * gelandet ist (bei EZ den Zulagen-Code über der zugehörigen Spalte). Welcher das ist, steht
+   * erst mit den Daten fest — siehe `ListenGruppe`.
+   */
+  listenKopf?: ListenPlatz & { tabelle: string };
+  /** Dreht den Text in der Zelle; 90° liest von unten nach oben (schmale Kopfspalten). */
+  drehung?: Drehung;
   /** nur für die Eingabemaske im Admin-Editor, für den Renderer irrelevant */
   label?: string;
+}
+
+/** Verweis auf einen dynamischen Spaltenplatz: `index` ist der wievielte belegte Platz der Gruppe. */
+export interface ListenPlatz {
+  /** Key in `TabellenDef.listen` */
+  gruppe: string;
+  index: number;
+}
+
+/**
+ * Spalten, deren Inhalt erst aus den Daten entsteht: EZ hat für Erschwerniszulagen sieben Plätze
+ * im Formular, welche Zulagen-Codes dort stehen, hängt vom Monat ab. Aus allen Zeilen wird
+ * ermittelt, welche Schlüssel überhaupt vorkommen; sie belegen der Reihe nach die Plätze, und jede
+ * Zeile trägt in ihrer Spalte den Wert zu genau diesem Schlüssel (oder nichts).
+ */
+export interface ListenGruppe {
+  /** Feld der Datenzeile mit der Liste, z.B. `Zulagen` */
+  quelle: string;
+  /** Feld eines Listeneintrags mit dem Schlüssel, z.B. `Typ` */
+  schluessel: string;
+  /** Feld eines Listeneintrags mit dem anzuzeigenden Wert, z.B. `Wert` */
+  wert: string;
+  /**
+   * Erlaubte Schlüssel in fester Reihenfolge — sie bestimmt, welcher Schlüssel welchen Platz
+   * bekommt. Ohne Angabe zählt die Reihenfolge des ersten Vorkommens in den Daten.
+   */
+  auswahl?: string[];
+  /** Beschriftung je Schlüssel für die Überschrift; ohne Eintrag erscheint der Schlüssel selbst. */
+  beschriftungen?: Record<string, string>;
 }
 
 export interface Spalte {
@@ -130,6 +187,9 @@ export interface Spalte {
   berechnet?: ZeilenBerechnet;
   /** Ankreuz-Spalte: nur befüllt, wenn die Bedingung zutrifft (siehe `Bedingung`) */
   wenn?: Bedingung;
+  /** Dynamischer Platz aus einer `ListenGruppe` statt eines festen Zeilenfelds (siehe dort) */
+  listenPlatz?: ListenPlatz;
+  drehung?: Drehung;
   label?: string;
 }
 
@@ -144,6 +204,8 @@ export interface TabellenDef {
   filter?: { feld: string; werte: (string | number)[] };
   hoehe: number;
   spalten: Spalte[];
+  /** Dynamische Spaltengruppen dieser Tabelle (EZ: Erschwerniszulagen, Leistungsprämie, GKR) */
+  listen?: Record<string, ListenGruppe>;
 }
 
 /** Platz, den eine Tabelle auf einer konkreten Seite einnimmt. */
@@ -152,6 +214,15 @@ export interface TabellenBereich {
   tabelle: string;
   startY: number;
   maxZeilen: number;
+  /**
+   * Eigene Spalten NUR für diese Seite; ohne Angabe gelten die der Tabelle. Deckt Vorlagen ab,
+   * deren Folgeseite ein anderes Spaltenraster hat (andere Breiten oder gar andere Spalten als die
+   * erste Seite). Die Werte kommen weiterhin aus derselben Tabelle — überschrieben wird nur, WO und
+   * WIE gezeichnet wird. Eine berechnete Spalte, die es nur hier gibt, wird zwar gedruckt, taucht
+   * aber nicht in den Zeilendaten auf und ist damit nicht summierbar; solche Spalten gehören in
+   * `TabellenDef.spalten`.
+   */
+  spalten?: Spalte[];
 }
 
 export interface SeitenDef {
@@ -172,6 +243,12 @@ export interface SeitenDef {
    */
   felder: Record<string, Feld>;
   signaturBild?: { x: number; y: number; w: number; h: number };
+  /**
+   * Diese Seite wird bei Zeilenüberlauf so oft wiederholt, wie ihre Tabellen noch Zeilen haben.
+   * Ohne eine solche Seite wirft `verteile()`, sobald Zeilen übrig bleiben. Bei EA ist es die
+   * einzige Seite, bei Bereitschaft die letzte (Seiten 3 und 4 sind gleich, 1 und 2 nicht).
+   */
+  wiederholt?: boolean;
 }
 
 export interface Layout {
@@ -179,11 +256,14 @@ export interface Layout {
    * (einseitig/mehrseitig) war nur wegen Kandidat C (pyHanko-Signaturfeld-Namenskollision)
    * nötig und entfällt unter Kandidat E (siehe Plan, Phase 5). */
   template: string;
-  /** Wird immer genau einmal gerendert. */
-  ersteSeite: SeitenDef;
-  /** Wird bei Zeilenüberlauf beliebig oft wiederholt; fehlt sie und reichen die Zeilen nicht
-   * auf `ersteSeite`, wirft `verteile()`. */
-  weitereSeite?: SeitenDef;
+  /**
+   * Seitenfolge des Formulars, mindestens eine Seite. Die frühere Aufteilung in `ersteSeite` +
+   * `weitereSeite` reichte nicht: Bereitschaft sieht auf den Seiten 1, 2 und 3 unterschiedlich aus
+   * und wiederholt erst ab Seite 3. Jede Seite verweist über `quelle` auf eine Seite der
+   * Vorlagen-PDF; welche Seiten tatsächlich im Ergebnis landen, entscheidet die Datenmenge
+   * (siehe `verteile()`).
+   */
+  seiten: SeitenDef[];
 }
 
 export interface Version {

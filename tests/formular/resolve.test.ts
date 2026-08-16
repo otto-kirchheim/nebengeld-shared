@@ -2,7 +2,7 @@ import { describe, expect, it } from 'bun:test';
 import { resolve } from '../../src/formular/resolve';
 import type { Layout, Registry } from '../../src/formular/types';
 
-const leeresLayout: Layout = { template: '', ersteSeite: { quelle: 0, bereiche: [{ tabelle: 'haupt', startY: 0, maxZeilen: 1 }], felder: {} } };
+const leeresLayout: Layout = { template: '', seiten: [{ quelle: 0, bereiche: [{ tabelle: 'haupt', startY: 0, maxZeilen: 1 }], felder: {} }] };
 
 function macheVersion(version: string, gueltigVon: string, gueltigBis: string | null) {
   return {

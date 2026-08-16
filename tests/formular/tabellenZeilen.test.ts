@@ -51,12 +51,35 @@ describe('tabellenZeilen', () => {
     expect(tabellenZeilen(daten, schlicht)[0]).toBe(roh as never);
   });
 
-  it('Ankreuz-Spalten fuellen nichts in die Zeile -- ihr Inhalt ist Text, keine Zahl', () => {
+  it('Ankreuz-Spalten fuellen ihr Ergebnis (das gedruckte Zeichen, sonst leer) in die Zeile', () => {
     const ankreuz: TabellenDef = {
       quelle: 'Daten.BE',
       hoehe: 14,
       spalten: [{ key: 'LRE1', x: 50, size: 9, wenn: { feld: 'LRE', werte: ['LRE 1'], dann: 'X' } }],
     };
-    expect(tabellenZeilen(daten, ankreuz)[0]).not.toHaveProperty('LRE1');
+    const zeilen = tabellenZeilen(daten, ankreuz);
+    expect(zeilen.map(z => z.LRE1)).toEqual(['X', '', '']);
+  });
+
+  it('mit numerischem "dann" zaehlt eine Summe ueber eine Ankreuz-Spalte die zutreffenden Zeilen', () => {
+    const ankreuz: TabellenDef = {
+      quelle: 'Daten.BE',
+      hoehe: 14,
+      spalten: [{ key: 'LRE1', x: 50, size: 9, wenn: { feld: 'LRE', werte: ['LRE 1', 'LRE 2'], dann: '1' } }],
+    };
+    const zeilen = tabellenZeilen(daten, ankreuz);
+    // '' zaehlt ueber alsZahl als 0, '1' als 1 -- die Summe ist damit die Anzahl der Treffer.
+    expect(OPS.summe(zeilen, 'LRE1')).toBe(2);
+  });
+
+  it('eine Ankreuz-Spalte mit berechnetem Wert und Wertebereich fuellt ihr Ergebnis ebenso in die Zeile', () => {
+    const ankreuzBereich: TabellenDef = {
+      quelle: 'Daten.BE',
+      hoehe: 14,
+      spalten: [{ key: 'lang', x: 50, size: 9, wenn: { berechnet: { op: 'zeitdifferenz', operanden: ['Ende', 'Beginn'] }, bereich: { von: 150, bis: 200 }, dann: '1' } }],
+    };
+    const zeilen = tabellenZeilen(daten, ankreuzBereich);
+    // Dauern: 150, 195, 165 -- alle drei liegen in [150, 200).
+    expect(zeilen.map(z => z.lang)).toEqual(['1', '1', '1']);
   });
 });

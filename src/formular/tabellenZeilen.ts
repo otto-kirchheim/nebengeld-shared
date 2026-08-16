@@ -1,20 +1,24 @@
-import { berechneZeile } from './aggregatoren';
+import { berechneZeile, trifftBedingung } from './aggregatoren';
 import { get } from './get';
 import type { Daten, TabellenDef, Zeile } from './types';
 
 /**
- * Ergänzt die Zeile um die Werte ihrer BERECHNETEN Spalten, abgelegt unter dem Spalten-Key.
+ * Ergänzt die Zeile um die Werte ihrer BERECHNETEN und ANKREUZ-Spalten, abgelegt unter dem
+ * Spalten-Key.
  *
- * Ohne das steht ein berechneter Wert (z.B. die Dauer aus Ende − Beginn) nur beim Zeichnen zur
- * Verfügung, nicht in den Daten — eine Summe darüber liefe ins Leere und ergäbe still 0. Die Zeile
- * wird dafür kopiert, die Nutzdaten bleiben unangetastet. Ein gleichnamiges gespeichertes Feld wird
- * überschrieben, damit die Summe zu dem passt, was in der Spalte tatsächlich gedruckt steht.
+ * Ohne das stünde ein berechneter Wert (z.B. die Dauer aus Ende − Beginn) oder ein Ankreuz-Ergebnis
+ * (das gedruckte Zeichen, sonst leer) nur beim Zeichnen zur Verfügung, nicht in den Daten — eine
+ * Summe darüber liefe ins Leere und ergäbe still 0 (z.B. Anzahl LRE-1-Einsätze über eine
+ * Ankreuz-Spalte mit `dann: '1'`). Die Zeile wird dafür kopiert, die Nutzdaten bleiben unangetastet.
+ * Ein gleichnamiges gespeichertes Feld wird überschrieben, damit die Summe zu dem passt, was in der
+ * Spalte tatsächlich gedruckt steht. Jede Spalte liest dabei die UNVERÄNDERTE `zeile`, nicht die
+ * Kopie -- eine Spalte darf also nicht auf einer anderen berechneten/Ankreuz-Spalte aufbauen.
  */
 function mitBerechnetenSpalten(zeile: Zeile, tabelle: TabellenDef): Zeile {
-  const berechnete = tabelle.spalten.filter(sp => sp.berechnet && !sp.wenn);
-  if (berechnete.length === 0) return zeile;
+  const ergaenzte = tabelle.spalten.filter(sp => sp.berechnet || sp.wenn);
+  if (ergaenzte.length === 0) return zeile;
   const kopie = { ...zeile };
-  for (const sp of berechnete) kopie[sp.key] = berechneZeile(sp.berechnet!, zeile);
+  for (const sp of ergaenzte) kopie[sp.key] = sp.wenn ? (trifftBedingung(sp.wenn, zeile) ? sp.wenn.dann : '') : berechneZeile(sp.berechnet!, zeile);
   return kopie;
 }
 

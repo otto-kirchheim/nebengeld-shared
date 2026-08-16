@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { FORMAT, OPS, ZEILEN_OPS, alsZahl, alsZeitstempelMinuten, berechneZeile, datumMitFrist, operandenFelder } from '../../src/formular/aggregatoren';
+import { FORMAT, OPS, ZEILEN_OPS, alsVergleichswert, alsZahl, alsZeitstempelMinuten, berechneZeile, datumMitFrist, operandenFelder } from '../../src/formular/aggregatoren';
 import type { Zeile } from '../../src/formular/types';
 
 describe('OPS', () => {
@@ -36,6 +36,14 @@ describe('FORMAT', () => {
     expect(FORMAT.tag('2026-03-15')).toBe('15');
     expect(FORMAT.wochentag('2026-03-15')).toBe('So');
     expect(FORMAT.monatJahr('2026-03-15')).toBe('03/2026');
+  });
+
+  it('tagZweistellig füllt die führende Null auf (zweistelliges Kästchen im Formular)', () => {
+    expect(FORMAT.tagZweistellig('2026-03-05')).toBe('05');
+    expect(FORMAT.tagZweistellig('2026-03-15')).toBe('15');
+    // Leerwert bleibt leer -- ein aufgefülltes "00" stünde sonst in jeder ungenutzten Zeile.
+    expect(FORMAT.tagZweistellig('')).toBe('');
+    expect(FORMAT.tagZweistellig(null)).toBe('');
   });
 
   it('datum liefert leeren String statt "Invalid Date" bei unlesbarem Wert', () => {
@@ -199,5 +207,32 @@ describe('alsZahl (Zeitwerte in Aggregationen)', () => {
 
   it('auch eine Zeilenrechnung rechnet mit gespeicherten Dauern', () => {
     expect(berechneZeile({ op: 'summe', operanden: ['Dauer', 30] }, { Dauer: '02:30' })).toBe(180);
+  });
+});
+
+describe('alsVergleichswert (Bedingung.bereich, feldunabhängig)', () => {
+  it('liest "HH:mm" als Minuten -- Dauer-/Uhrzeit-Bereiche wie 8:00 bis 14:00', () => {
+    expect(alsVergleichswert('8:00')).toBe(480);
+    expect(alsVergleichswert('14:00')).toBe(840);
+  });
+
+  it('liest einen vollen Zeitstempel als Minuten seit Epoche -- Datums-Bereiche', () => {
+    expect(alsVergleichswert('2026-03-15T00:00:00Z')).toBe(Math.round(new Date('2026-03-15T00:00:00Z').getTime() / 60_000));
+  });
+
+  it('laesst echte Zahlen unveraendert, statt sie als Zeitstempel in ms zu deuten', () => {
+    // alsZeitstempelMinuten wuerde 5 als "5ms nach Epoche" lesen und faelschlich 0 liefern.
+    expect(alsVergleichswert(5)).toBe(5);
+    expect(alsZeitstempelMinuten(5)).toBe(0);
+  });
+
+  it('faellt bei numerischen Strings, die kein Datum sind, auf Number() zurueck', () => {
+    expect(alsVergleichswert('20')).toBe(20);
+    expect(alsVergleichswert('12.5')).toBe(12.5);
+  });
+
+  it('unlesbare Werte zaehlen als 0', () => {
+    expect(alsVergleichswert('kaputt')).toBe(0);
+    expect(alsVergleichswert(null)).toBe(0);
   });
 });
