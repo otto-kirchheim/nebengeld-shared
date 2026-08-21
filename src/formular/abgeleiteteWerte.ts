@@ -1,0 +1,59 @@
+import type { IDownloadEWT } from '../download';
+import { alsMinuten, FORMAT, ZEILEN_OPS } from './aggregatoren';
+
+const STUNDE = 60;
+
+/**
+ * Dauer zwischen zwei `"HH:mm"`-Zeiten in Minuten, Mitternacht-Wrap über die bestehende
+ * `zeitdifferenz`-Rechnung (siehe `ZEILEN_OPS`). Fehlt einer der beiden Werte, gibt es keine
+ * Dauer -- eine Differenz gegen `0` würde sonst eine falsche Zeitspanne vortäuschen.
+ */
+function dauerMinuten(ende: string | undefined, beginn: string | undefined): number {
+  if (!ende || !beginn) return 0;
+  return ZEILEN_OPS.zeitdifferenz([alsMinuten(ende), alsMinuten(beginn)]);
+}
+
+export interface EwtAbgeleiteteWerte {
+  DauerWohnung: string;
+  DauerErsteTkgSt: string;
+  Wohnung8bis14: boolean;
+  Wohnung14bis24: boolean;
+  WohnungUeber24: boolean;
+  BeamterUeber8Wohnung: boolean;
+  TkgSt8bis24: boolean;
+  TkgStUeber24: boolean;
+}
+
+/**
+ * Vorberechnete Zeiten/Ankreuzfelder für eine EWT-Zeile (Phase 10 PDF-Vorlagen-Pipeline) --
+ * ersetzt die Overlay-Rechnung im Editor durch fest verdrahtete, getestete Logik, die jede
+ * Version direkt aus dem Datenkatalog wählen kann. `beamter` kommt aus `VorgabenU.Pers.TB`
+ * (Konvention im Rest der Codebase: Beamter = `TB !== 'Tarifkraft'`), nicht aus der Zeile selbst
+ * -- `BeamterUeber8Wohnung` ist der einzige hier feldübergreifende Fall.
+ *
+ * Die sechs Boolean-Felder im Editor als Ankreuz-Quelle über `Bedingung.bereich: { von: 1, bis: 2 }`
+ * verwenden, NICHT über `werte` -- `werte` ist UI-seitig nur für Checkbox-/Freitext-Auswahl aus
+ * `string`-Werten gebaut (`alsVergleichswert(true) === 1`/`alsVergleichswert(false) === 0` macht den
+ * `bereich`-Vergleich funktionsfähig, ohne den Editor oder das Typsystem anzufassen).
+ */
+// `WohnungUeber24`/`TkgStUeber24` sind mit dem aktuellen Datenmodell strukturell nie erreichbar --
+// abWE/anWE/ab1E/an1E sind reine Uhrzeit-Felder (kein Datum, `type="time"` im Editor), die
+// Reihenfolge-Validierung erlaubt höchstens einen Mitternachtswechsel und deckelt die Gesamtspanne
+// auf 20h. Bewusst trotzdem exakt wie spezifiziert gebaut (User-Rückfrage 2026-08-21) -- symmetrisch
+// zu den anderen Bändern, kein Sonderfall im Code, greift automatisch, falls die Zeitfelder später
+// echte mehrtägige Spannen abbilden.
+export function ewtAbgeleiteteWerte(zeile: Pick<IDownloadEWT, 'abWE' | 'anWE' | 'ab1E' | 'an1E'>, beamter: boolean): EwtAbgeleiteteWerte {
+  const dauerWohnung = dauerMinuten(zeile.anWE, zeile.abWE);
+  const dauerErsteTkgSt = dauerMinuten(zeile.an1E, zeile.ab1E);
+
+  return {
+    DauerWohnung: FORMAT.stunden(dauerWohnung),
+    DauerErsteTkgSt: FORMAT.stunden(dauerErsteTkgSt),
+    Wohnung8bis14: dauerWohnung > 8 * STUNDE && dauerWohnung <= 14 * STUNDE,
+    Wohnung14bis24: dauerWohnung > 14 * STUNDE && dauerWohnung <= 24 * STUNDE,
+    WohnungUeber24: dauerWohnung > 24 * STUNDE,
+    BeamterUeber8Wohnung: beamter && dauerWohnung > 8 * STUNDE,
+    TkgSt8bis24: dauerErsteTkgSt > 8 * STUNDE && dauerErsteTkgSt <= 24 * STUNDE,
+    TkgStUeber24: dauerErsteTkgSt > 24 * STUNDE,
+  };
+}

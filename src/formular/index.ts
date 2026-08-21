@@ -1,5 +1,6 @@
 export * from './types';
 export * from './aggregatoren';
+export * from './abgeleiteteWerte';
 export * from './get';
 export * from './tabellenZeilen';
 export * from './spaltenFuer';

@@ -64,6 +64,17 @@ export interface IDownloadEWT {
   an1E?: string;
   anWE?: string;
   berechnen: boolean;
+  // Vorberechnete Werte (Phase 10 PDF-Vorlagen-Pipeline, siehe formular/abgeleiteteWerte.ts) --
+  // optional, damit der alte Backend-Downloadpfad (ohne diese Anreicherung) unverändert gültig
+  // bleibt. Renderer-seitig immer vorhanden, sobald `ewtAbgeleiteteWerte()` durchgelaufen ist.
+  DauerWohnung?: string;
+  DauerErsteTkgSt?: string;
+  Wohnung8bis14?: boolean;
+  Wohnung14bis24?: boolean;
+  WohnungUeber24?: boolean;
+  BeamterUeber8Wohnung?: boolean;
+  TkgSt8bis24?: boolean;
+  TkgStUeber24?: boolean;
 }
 
 export type IDownloadNebengeld = Required<Omit<INebengeld, '_id' | 'EWT'>>;

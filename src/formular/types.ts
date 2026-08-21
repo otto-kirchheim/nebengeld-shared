@@ -12,10 +12,14 @@ export type FormatName =
   | 'tagZweistellig'
   | 'wochentag'
   | 'monatJahr'
+  | 'monatName'
+  | 'monatNameKurz'
   | 'uhrzeit'
   | 'stunden'
   | 'liste'
-  | 'grossbuchstaben';
+  | 'grossbuchstaben'
+  | 'jaNein'
+  | 'oe';
 export type OpName = 'summe' | 'anzahl' | 'max' | 'letztesDatum';
 export type ZeilenOpName = 'produkt' | 'summe' | 'differenz' | 'quotient' | 'zeitdifferenz' | 'zeitspanne';
 
@@ -84,16 +88,17 @@ export interface ZeilenBerechnet {
  * Geprüfter Wert: `feld` (Zeilen-Feldname) ODER `berechnet` (Rechnung über Felder derselben Zeile,
  * z.B. eine Dauer aus zwei Uhrzeiten) — genau eines ist gesetzt.
  *
- * Vergleich: `werte` (Kreuz, wenn der Wert einer davon ist) ODER `bereich` (Kreuz, wenn der Wert im
- * Intervall liegt, `von` einschließlich, `bis` ausschließlich — z.B. Einsatzdauer ab 8:00 bis vor
- * 14:00, oder Privat-km ab 5 bis 20) — genau eines ist gesetzt. Gelesen über `alsVergleichswert`:
- * passt sich dem jeweiligen Wert an (Zahl, `"HH:mm"` oder voller Zeitstempel), keine feste Annahme
- * über die Feldart.
+ * Vergleich: `werte` (Kreuz, wenn der Wert einer davon ist -- inkl. `boolean` für echte
+ * Ankreuz-Quellfelder wie `Wohnung8bis14`, siehe `abgeleiteteWerte.ts`) ODER `bereich` (Kreuz, wenn
+ * der Wert im Intervall liegt, `von` einschließlich, `bis` ausschließlich — z.B. Einsatzdauer ab
+ * 8:00 bis vor 14:00, oder Privat-km ab 5 bis 20) — genau eines ist gesetzt. Gelesen über
+ * `alsVergleichswert`: passt sich dem jeweiligen Wert an (Zahl, `"HH:mm"` oder voller Zeitstempel),
+ * keine feste Annahme über die Feldart.
  */
 export interface Bedingung {
   feld?: string;
   berechnet?: ZeilenBerechnet;
-  werte?: (string | number)[];
+  werte?: (string | number | boolean)[];
   bereich?: { von: string | number; bis: string | number };
   dann: string;
 }
@@ -110,7 +115,7 @@ export interface Bedingung {
 export interface FeldBedingung {
   feld?: string;
   berechnet?: Berechnet;
-  werte?: (string | number)[];
+  werte?: (string | number | boolean)[];
   bereich?: { von: string | number; bis: string | number };
   dann: string;
 }

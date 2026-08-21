@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { FORMAT, OPS, ZEILEN_OPS, alsVergleichswert, alsZahl, alsZeitstempelMinuten, berechneZeile, datumMitFrist, operandenFelder } from '../../src/formular/aggregatoren';
+import { FORMAT, OPS, ZEILEN_OPS, alsVergleichswert, alsZahl, alsZeitstempelMinuten, berechneZeile, datumMitFrist, operandenFelder, standardText, trifftBedingung } from '../../src/formular/aggregatoren';
 import type { Zeile } from '../../src/formular/types';
 
 describe('OPS', () => {
@@ -60,6 +60,30 @@ describe('FORMAT', () => {
     expect(FORMAT.monatJahr('14.08.2026')).toBe('08/2026');
   });
 
+  it('monatName/monatNameKurz lesen die eigenständige Monat-Zahl (1-12), kein Datum', () => {
+    expect(FORMAT.monatName(3)).toBe('März');
+    expect(FORMAT.monatName('3')).toBe('März');
+    expect(FORMAT.monatName(1)).toBe('Januar');
+    expect(FORMAT.monatName(12)).toBe('Dezember');
+    expect(FORMAT.monatNameKurz(3)).toBe('Mär');
+    expect(FORMAT.monatNameKurz(1)).toBe('Jan');
+    expect(FORMAT.monatNameKurz(9)).toBe('Sep');
+  });
+
+  it('monatName: NICHT über alsDatum -- new Date(3) wäre sonst fälschlich Januar statt März', () => {
+    // Reproduziert genau den Fehler, den eine alsDatum-basierte Implementierung hätte: new Date(3)
+    // ist ein gültiger Zeitstempel nahe der Unix-Epoche (Januar 1970), nicht der Monat März.
+    expect(FORMAT.monatName(3)).not.toBe('Januar');
+  });
+
+  it('monatName/monatNameKurz: unlesbare oder außerhalb 1-12 liegende Werte bleiben leer', () => {
+    expect(FORMAT.monatName(0)).toBe('');
+    expect(FORMAT.monatName(13)).toBe('');
+    expect(FORMAT.monatName('kaputt')).toBe('');
+    expect(FORMAT.monatName(null)).toBe('');
+    expect(FORMAT.monatNameKurz(0)).toBe('');
+  });
+
   it('uhrzeit akzeptiert reine HH:mm-Strings und ISO-Zeitstempel', () => {
     expect(FORMAT.uhrzeit('7:05')).toBe('07:05');
     expect(FORMAT.uhrzeit('2026-03-15T14:30:00')).toBe('14:30');
@@ -70,13 +94,73 @@ describe('FORMAT', () => {
     expect(FORMAT.stunden('26:15')).toBe('26:15');
   });
 
-  it('liste fügt Arrays zusammen und filtert Leerwerte (z.B. Pers.OE)', () => {
-    expect(FORMAT.liste(['I', 'IW', '', 'MI'])).toBe('I / IW / MI');
+  it('liste fügt Arrays generisch zusammen und filtert Leerwerte', () => {
+    expect(FORMAT.liste(['NZ', '', 'SoZ'])).toBe('NZ / SoZ');
     expect(FORMAT.liste('einzeln')).toBe('einzeln');
   });
 
   it('grossbuchstaben normalisiert Text', () => {
     expect(FORMAT.grossbuchstaben('müller')).toBe('MÜLLER');
+  });
+
+  it('jaNein übersetzt Boolean (echt oder als String) statt englischem true/false', () => {
+    expect(FORMAT.jaNein(true)).toBe('Ja');
+    expect(FORMAT.jaNein(false)).toBe('Nein');
+    expect(FORMAT.jaNein('true')).toBe('Ja');
+    expect(FORMAT.jaNein('false')).toBe('Nein');
+    expect(FORMAT.jaNein(undefined)).toBe('Nein');
+  });
+
+  it('oe fügt Ebenen in kanonischer OE-Schreibweise zusammen (User-Fund: liste zerstört das Format)', () => {
+    // Exakter Reproduktionsfall: `liste` lieferte "V / IW / MI / N / KSL / IL / 03", erwartet war
+    // die kanonische Schreibweise wie in `backend/src/utils/oe-scope.ts::joinOeSegments`.
+    expect(FORMAT.oe(['V', 'IW', 'MI', 'N', 'KSL', 'IL', '03'])).toBe('V.IW-MI-N-KSL-IL 03');
+  });
+
+  it('oe: erste zwei Ebenen mit Punkt, weitere mit Bindestrich, ohne numerische letzte Ebene', () => {
+    expect(FORMAT.oe(['I', 'IW', 'MI', 'N', 'MUS', 'IL'])).toBe('I.IW-MI-N-MUS-IL');
+  });
+
+  it('oe: Randfälle -- leer, ein Element, zwei Elemente, Leerwerte gefiltert', () => {
+    expect(FORMAT.oe([])).toBe('');
+    expect(FORMAT.oe(['V'])).toBe('V');
+    expect(FORMAT.oe(['V', 'IW'])).toBe('V.IW');
+    expect(FORMAT.oe(['V', 'IW', '', 'MI'])).toBe('V.IW-MI');
+  });
+
+  it('oe: eine rein numerische letzte Ebene zählt nur ab zwei Restebenen als Teamnummer', () => {
+    // Nur EINE Restebene und die ist numerisch: kein Sonderfall, ganz normal mit "." verbunden.
+    expect(FORMAT.oe(['V', '03'])).toBe('V.03');
+  });
+
+  it('oe: Nicht-Array fällt auf String zurück wie die anderen Formate', () => {
+    expect(FORMAT.oe('V.IW-MI')).toBe('V.IW-MI');
+    expect(FORMAT.oe(undefined)).toBe('');
+  });
+});
+
+describe('standardText', () => {
+  it('leerer String für null/undefined', () => {
+    expect(standardText(null)).toBe('');
+    expect(standardText(undefined)).toBe('');
+  });
+
+  it('Arrays über FORMAT.liste statt kommagetrennt ohne Leerzeichen (OE-Bug)', () => {
+    expect(standardText(['I', 'IW', 'MI', 'N', 'MUS', 'IL', ''])).toBe('I / IW / MI / N / MUS / IL');
+  });
+
+  it('Booleans als Ja/Nein statt englischem true/false', () => {
+    expect(standardText(true)).toBe('Ja');
+    expect(standardText(false)).toBe('Nein');
+  });
+
+  it('verschachtelte Objekte (falsch gewählter Datenpfad) werden leer statt "[object Object]"', () => {
+    expect(standardText({ Vorname: 'Max' })).toBe('');
+  });
+
+  it('Zahl und Text unverändert', () => {
+    expect(standardText(42)).toBe('42');
+    expect(standardText('Max')).toBe('Max');
   });
 });
 
@@ -247,5 +331,23 @@ describe('alsVergleichswert (Bedingung.bereich, feldunabhängig)', () => {
 
   it('liest auch das deutsche "DD.MM.YYYY"-Tag-Format als Minuten seit Epoche -- Bedingungen ueber echte Tag-Werte, nicht nur ISO-Testdaten', () => {
     expect(alsVergleichswert('14.08.2026')).toBe(Math.round(new Date(2026, 7, 14).getTime() / 60_000));
+  });
+
+  it('liest echte Booleans als 1/0 -- bereich:{von:1,bis:2} bleibt für Boolean-Zeilenfelder (z.B. abgeleiteteWerte.ts) als Altweg gültig, auch nachdem werte direkt boolean unterstützt', () => {
+    expect(alsVergleichswert(true)).toBe(1);
+    expect(alsVergleichswert(false)).toBe(0);
+  });
+});
+
+describe('trifftBedingung (werte mit echtem boolean statt bereich-Umweg)', () => {
+  it('werte: [true] trifft nur bei echtem true, nicht bei false/undefined', () => {
+    expect(trifftBedingung({ feld: 'aktiv', werte: [true], dann: 'X' }, { aktiv: true })).toBe(true);
+    expect(trifftBedingung({ feld: 'aktiv', werte: [true], dann: 'X' }, { aktiv: false })).toBe(false);
+    expect(trifftBedingung({ feld: 'aktiv', werte: [true], dann: 'X' }, {})).toBe(false);
+  });
+
+  it('werte: [false] trifft nur bei echtem false', () => {
+    expect(trifftBedingung({ feld: 'aktiv', werte: [false], dann: 'X' }, { aktiv: false })).toBe(true);
+    expect(trifftBedingung({ feld: 'aktiv', werte: [false], dann: 'X' }, { aktiv: true })).toBe(false);
   });
 });

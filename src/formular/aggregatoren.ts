@@ -139,7 +139,7 @@ export function trifftBedingung(w: Bedingung, zeile: Zeile): boolean {
     const wert = alsVergleichswert(roh);
     return wert >= alsVergleichswert(w.bereich.von) && wert < alsVergleichswert(w.bereich.bis);
   }
-  return (w.werte ?? []).includes(roh as string | number);
+  return (w.werte ?? []).includes(roh as string | number | boolean);
 }
 
 /** Alle Zeilen-Feldnamen einer (ggf. verschachtelten) Rechnung — für Testdaten und Editor-Hinweise. */
@@ -185,6 +185,8 @@ function zweistellig(n: number): string {
   return String(n).padStart(2, '0');
 }
 
+const MONATSNAMEN = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+
 export const FORMAT: Record<FormatName, (v: unknown) => string> = {
   waehrung: v => Number(v).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
   zahl: v => Number(v).toLocaleString('de-DE', { maximumFractionDigits: 2 }),
@@ -219,6 +221,15 @@ export const FORMAT: Record<FormatName, (v: unknown) => string> = {
     const d = alsDatum(v);
     return d ? `${zweistellig(d.getMonth() + 1)}/${d.getFullYear()}` : '';
   },
+  /**
+   * Monatsname für den eigenständigen `Monat`-Datenpfad (1-12 als Zahl, kein Datum -- anders als
+   * `monatJahr` oben, das ein volles Datum erwartet). Absichtlich NICHT über `alsDatum`: `new
+   * Date(3)` wäre ein gültiges (aber falsches) Datum nahe der Unix-Epoche, `alsDatum` würde also
+   * "Januar" statt "März" liefern.
+   */
+  monatName: v => MONATSNAMEN[Number(v) - 1] ?? '',
+  /** Wie `monatName`, auf die ersten drei Buchstaben gekürzt (`Mär` für März bleibt korrekt). */
+  monatNameKurz: v => MONATSNAMEN[Number(v) - 1]?.slice(0, 3) ?? '',
 
   uhrzeit: v => {
     const treffer = NUR_UHRZEIT.exec(String(v ?? ''));
@@ -233,7 +244,51 @@ export const FORMAT: Record<FormatName, (v: unknown) => string> = {
     return `${Math.floor(minuten / 60)}:${zweistellig(minuten % 60)}`;
   },
 
-  /** Arrays (z.B. `Pers.OE` als Hierarchie-Ebenen) zu einer Zelle zusammenfügen. */
+  /** Arrays generisch zu einer Zelle zusammenfügen (Trenner ` / `). Für `Pers.OE` NICHT verwenden --
+   * das hat eine eigene, striktere Schreibweise, siehe `oe` unten. */
   liste: v => (Array.isArray(v) ? v.filter(t => t !== null && t !== undefined && t !== '').join(' / ') : String(v ?? '')),
   grossbuchstaben: v => String(v ?? '').toUpperCase(),
+  /** Boolean (echt oder als `"true"`/`"false"`-String) als deutsches Wort statt `true`/`false`. */
+  jaNein: v => (v === true || v === 'true' ? 'Ja' : 'Nein'),
+  /**
+   * Hierarchie-Ebenen einer Organisationseinheit (`Pers.OE`) zur kanonischen Schreibweise
+   * zusammenfügen: die ersten beiden Ebenen mit `.`, weitere mit `-`, eine rein numerische letzte
+   * Ebene (Teamnummer) mit Leerzeichen statt Bindestrich -- z.B. `['V','IW','MI','N','KSL','IL','03']`
+   * → `"V.IW-MI-N-KSL-IL 03"`. Spiegelt `joinOeSegments` (Backend `utils/oe-scope.ts`) und
+   * `joinOeLevels` (Frontend `infrastructure/data/oeLevels.ts`) -- bewusst dupliziert statt geteilt,
+   * siehe Kommentar dort. Ein generisches `liste` (` / `-Join) zerstört diese Schreibweise, siehe
+   * OE-Bug.
+   */
+  oe: v => {
+    if (!Array.isArray(v)) return String(v ?? '');
+    const segmente = v.map(teil => String(teil ?? '').trim()).filter(Boolean);
+    if (segmente.length === 0) return '';
+    if (segmente.length === 1) return segmente[0]!;
+
+    const [ebene1, ebene2, ...rest] = segmente;
+    const basis = `${ebene1}.${ebene2}`;
+    if (rest.length === 0) return basis;
+
+    const letzte = rest[rest.length - 1]!;
+    const hatNumerischeTeamnummer = /^\d+$/.test(letzte) && rest.length >= 2;
+    if (!hatNumerischeTeamnummer) return `${basis}-${rest.join('-')}`;
+
+    const vorTeamnummer = rest.slice(0, -1).join('-');
+    return `${basis}-${vorTeamnummer} ${letzte}`;
+  },
 };
+
+/**
+ * Stringifizierung für Werte OHNE explizites `format` -- der Renderer greift hierauf zurück, wenn
+ * eine Feld-/Spalten-/Platzhalter-Konfiguration kein `format` trägt. Nie roh `String()` für Typen,
+ * bei denen das eine kaputte Zelle ergäbe: Arrays (`String([...])` = kommagetrennt ohne Leerzeichen,
+ * siehe der OE-Bug, der das hier ausgelöst hat), Booleans (`String(true)` = englisches "true") und
+ * verschachtelte Objekte (falsch gewählter Datenpfad, `String({...})` = `"[object Object]"`).
+ */
+export function standardText(v: unknown): string {
+  if (v === null || v === undefined) return '';
+  if (Array.isArray(v)) return FORMAT.liste(v);
+  if (typeof v === 'boolean') return FORMAT.jaNein(v);
+  if (typeof v === 'object') return '';
+  return String(v);
+}
