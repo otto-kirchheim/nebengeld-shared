@@ -99,6 +99,23 @@ export interface Bedingung {
 }
 
 /**
+ * Bedingter Feld-Inhalt -- das Gegenstück zu `Bedingung`, aber auf Dokumentebene statt Zeilenebene:
+ * `Feld` rendert einmal je Seite, hat also keinen Zeilenbezug wie eine Tabellenspalte. Deckt z.B.
+ * einen Hinweistext ab, der nur bei Gesamtsumme > 0 erscheint.
+ *
+ * Geprüfter Wert: `feld` (Datenpfad in `Daten`, z.B. ein Personenfeld) ODER `berechnet`
+ * (Aggregation über Zeilen, siehe `Berechnet`) — genau eines ist gesetzt. Vergleich wie bei
+ * `Bedingung`: `werte` (Mitgliedschaft) ODER `bereich` (Intervall).
+ */
+export interface FeldBedingung {
+  feld?: string;
+  berechnet?: Berechnet;
+  werte?: (string | number)[];
+  bereich?: { von: string | number; bis: string | number };
+  dann: string;
+}
+
+/**
  * Zelle statt Punkt: `x`/`y` sind linke/untere Kante, `x2`/`y2` die gegenüberliegenden. Fehlt `x2`,
  * ist `x` der Textanker (links- bzw. rechtsbündig gegen `x`); fehlt `y2`, ist `y` direkt die
  * Text-Baseline. Mit beiden Kanten setzt der Renderer den Text horizontal laut `align` und vertikal
@@ -120,18 +137,23 @@ export interface Feld {
   berechnet?: Berechnet;
   /**
    * Fester Text statt Datenpfad-Auflösung. Platzhalter in geschweiften Klammern werden ersetzt:
-   * `{seite}`/`{seiten}` für die Seitenzahlen, jeder andere Name als Datenpfad
-   * (z.B. `"Zulagenzettel {Monat}/{Jahr} — Seite {seite} von {seiten}"`).
+   * `{seite}`/`{seiten}` für die Seitenzahlen, `{heute}` für das Erzeugungsdatum, jeder andere Name
+   * als Datenpfad (z.B. `"Zulagenzettel {Monat}/{Jahr} — Seite {seite} von {seiten}"`). Deckt auch
+   * mehrere kombinierte Datenpfade ab (z.B. `"{Nachname}, {Vorname}"`) -- ohne `quellen`s
+   * Leerteile-Filter, für den einfachen Fall reicht das meist.
    */
   text?: string;
   /**
-   * Mehrere Datenpfade in EINE Zelle, verbunden mit `trenner` (z.B. Nachname/Vorname oder
-   * Adresszeilen). Leere Teile fallen weg, damit optionale Felder keine doppelten Trennzeichen
-   * hinterlassen; ein gesetztes `format` gilt für jeden Teil einzeln.
+   * Mehrere Datenpfade in EINE Zelle, verbunden mit `trenner` (z.B. Adresszeilen). Leere Teile
+   * fallen weg, damit optionale Felder (z.B. `Adress2`) keine doppelten Trennzeichen hinterlassen —
+   * das kann `text`s Platzhalter-Ersetzung nicht (dort bleibt die Trennzeichen-Literale stehen, auch
+   * wenn ein Platzhalter leer auflöst); ein gesetztes `format` gilt für jeden Teil einzeln.
    */
   quellen?: string[];
   /** Trennzeichen für `quellen`, z.B. `", "`, `" / "`, `"; "`. Ohne Angabe ein Leerzeichen. */
   trenner?: string;
+  /** Zeigt `wenn.dann` nur, wenn die Bedingung zutrifft, sonst bleibt die Zelle leer. */
+  wenn?: FeldBedingung;
   /**
    * Überschrift eines dynamischen Spaltenplatzes: zeigt den Schlüssel, der auf diesem Platz
    * gelandet ist (bei EZ den Zulagen-Code über der zugehörigen Spalte). Welcher das ist, steht
