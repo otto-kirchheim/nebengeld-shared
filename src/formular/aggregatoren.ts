@@ -78,9 +78,9 @@ export function alsVergleichswert(v: unknown): number {
   if (typeof v === 'number') return v;
   const s = String(v ?? '');
   if (NUR_UHRZEIT.test(s)) return alsMinuten(v);
-  if (ISO_ZEITSTEMPEL.test(s)) {
-    const d = new Date(v as string);
-    if (!Number.isNaN(d.getTime())) return Math.round(d.getTime() / 60_000);
+  if (ISO_ZEITSTEMPEL.test(s) || DEUTSCHES_DATUM.test(s)) {
+    const d = alsDatum(v);
+    if (d) return Math.round(d.getTime() / 60_000);
   }
   return Number(v) || 0;
 }
@@ -154,9 +154,29 @@ export function operandenFelder(b: ZeilenBerechnet): string[] {
 /** `"HH:mm"`-Strings kommen so aus den Download-Bodies und dürfen nicht durch `new Date()` laufen. */
 const NUR_UHRZEIT = /^(\d{1,2}):(\d{2})/;
 
+/**
+ * `Tag`-Felder kommen aus den Download-Bodies als deutsches `"DD.MM.YYYY"` (siehe `IDatenN`/
+ * `IDatenEA`/`IDatenBE` im Frontend — Tabellen speichern Tage so, nicht als ISO-String).
+ * `new Date("14.08.2026")` liefert je nach Engine `Invalid Date` oder ein falsches Datum, ein
+ * `datum`/`tagZweistellig`/`wochentag`-Feld über einem echten Tag-Wert blieb dadurch bisher leer.
+ */
+const DEUTSCHES_DATUM = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/;
+
 function alsDatum(v: unknown): Date | null {
   // `new Date(null)` ergibt die Epoche statt Invalid Date -- Leerwerte deshalb vorher abfangen.
   if (v === null || v === undefined || v === '') return null;
+  // Nur echte Strings aufs deutsche Format prüfen -- `letztesDatum` reicht hier z.B. einen
+  // Millisekunden-Zeitstempel (Zahl) durch, `String(zahl)` sähe nie wie ein Datum aus, aber
+  // `new Date(stringifizierteZahl)` (Datums-PARSING) liefert anders als `new Date(zahl)`
+  // (Epoche-Rechnung) `Invalid Date` -- deshalb Zahlen unverändert an `new Date()` weiterreichen.
+  if (typeof v === 'string') {
+    const deutsch = DEUTSCHES_DATUM.exec(v);
+    if (deutsch) {
+      const [, tag, monat, jahr] = deutsch;
+      const d = new Date(Number(jahr), Number(monat) - 1, Number(tag));
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+  }
   const d = new Date(v as string);
   return Number.isNaN(d.getTime()) ? null : d;
 }

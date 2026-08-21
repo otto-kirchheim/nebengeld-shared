@@ -51,6 +51,15 @@ describe('FORMAT', () => {
     expect(FORMAT.datum(null)).toBe('');
   });
 
+  it('akzeptiert deutsches "DD.MM.YYYY" -- so speichern IDatenN/IDatenEA/IDatenBE ihr Tag-Feld, nicht ISO (User-Fund: EA-Kalendertag/Wochentag blieben im PDF leer)', () => {
+    expect(FORMAT.datum('14.08.2026')).toBe('14.08.2026');
+    expect(FORMAT.datumKurz('05.08.2026')).toBe('05.08.');
+    expect(FORMAT.tag('14.08.2026')).toBe('14');
+    expect(FORMAT.tagZweistellig('5.08.2026')).toBe('05');
+    expect(FORMAT.wochentag('14.08.2026')).toBe('Fr');
+    expect(FORMAT.monatJahr('14.08.2026')).toBe('08/2026');
+  });
+
   it('uhrzeit akzeptiert reine HH:mm-Strings und ISO-Zeitstempel', () => {
     expect(FORMAT.uhrzeit('7:05')).toBe('07:05');
     expect(FORMAT.uhrzeit('2026-03-15T14:30:00')).toBe('14:30');
@@ -234,5 +243,9 @@ describe('alsVergleichswert (Bedingung.bereich, feldunabhängig)', () => {
   it('unlesbare Werte zaehlen als 0', () => {
     expect(alsVergleichswert('kaputt')).toBe(0);
     expect(alsVergleichswert(null)).toBe(0);
+  });
+
+  it('liest auch das deutsche "DD.MM.YYYY"-Tag-Format als Minuten seit Epoche -- Bedingungen ueber echte Tag-Werte, nicht nur ISO-Testdaten', () => {
+    expect(alsVergleichswert('14.08.2026')).toBe(Math.round(new Date(2026, 7, 14).getTime() / 60_000));
   });
 });
