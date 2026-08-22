@@ -95,6 +95,17 @@ export interface IBereitschaftszeitraumDownloadBody extends IDownloadBase {
     BZ: IDownloadBereitschaftszeitraum[];
     BE?: IDownloadBereitschaftseinsatz[];
   };
+  // Inline statt Import von `BereitschaftszulageWerte` (formular/abgeleiteteWerte.ts) -- diese
+  // Datei importiert bereits Typen VON hier (IDownloadBereitschaftseinsatz etc.), ein Rückimport
+  // würde einen Zyklus erzeugen. Struktur muss manuell synchron gehalten werden.
+  Bereitschaftszulage?: {
+    BereitschaftsMinuten?: number;
+    SummeTarif?: number;
+    SummeBeamter1?: number;
+    SummeBeamter2?: number;
+    SummeBeamter3?: number;
+    GeldwertBeamter?: number;
+  };
 }
 
 export interface IEwtDownloadBody extends IDownloadBase {

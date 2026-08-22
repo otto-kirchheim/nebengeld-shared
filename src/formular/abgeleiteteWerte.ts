@@ -1,4 +1,6 @@
 import type { IDownloadBereitschaftseinsatz, IDownloadBereitschaftszeitraum, IDownloadEWT } from '../download';
+import type { IVorgabeValue } from '../domain';
+import type { TarifBesoldung } from '../enums';
 import { alsMinuten, alsZeitstempelMinuten, FORMAT, ZEILEN_OPS } from './aggregatoren';
 
 const STUNDE = 60;
@@ -67,13 +69,14 @@ export interface BzAbgeleiteteWerte {
  * Dauer eines Bereitschaftszeitraums in Minuten (Phase 11 PDF-Vorlagen-Pipeline) -- bewusst eine
  * Zahl statt `FORMAT.stunden`-Text (anders als bei EWT), User-Vorgabe. `Beginn`/`Ende` sind volle
  * Zeitstempel (siehe `IDownloadBereitschaftszeitraum`), ein Zeitraum darf über Tage laufen, deshalb
- * `zeitspanne` (keine Mitternachts-Korrektur wie bei `zeitdifferenz`). `Pause` wird abgezogen;
- * `Math.max(0, ...)` fängt einen Dateneingabefehler ab (Pause länger als der Zeitraum) statt eine
- * negative Minutenzahl auszugeben.
+ * `zeitspanne` (keine Mitternachts-Korrektur wie bei `zeitdifferenz`). `Pause` wird ADDIERT, wie
+ * `aktualisiereBerechnung.ts` (Bereitschaft zählt inkl. Pause als Dienstzeit) -- ein früherer
+ * Subtraktions-Fix war falsch (widersprach der produktiv genutzten Bereitschaftszulage-Berechnung)
+ * und wurde korrigiert.
  */
 export function bzAbgeleiteteWerte(zeile: Pick<IDownloadBereitschaftszeitraum, 'Beginn' | 'Ende' | 'Pause'>): BzAbgeleiteteWerte {
-  const minuten = ZEILEN_OPS.zeitspanne([alsZeitstempelMinuten(zeile.Ende), alsZeitstempelMinuten(zeile.Beginn)]) - zeile.Pause;
-  return { Dauer: Math.max(0, minuten) };
+  const minuten = ZEILEN_OPS.zeitspanne([alsZeitstempelMinuten(zeile.Ende), alsZeitstempelMinuten(zeile.Beginn)]) + zeile.Pause;
+  return { Dauer: minuten };
 }
 
 export interface BeAbgeleiteteWerte {
@@ -101,5 +104,52 @@ export function beAbgeleiteteWerte(
   return {
     Dauer: ZEILEN_OPS.zeitdifferenz([alsMinuten(zeile.Ende), alsMinuten(zeile.Beginn)]),
     PrivatKmBetrag: Math.round(zeile.PrivatKm * privatKmSatz * 100) / 100,
+  };
+}
+
+export interface BereitschaftszulageWerte {
+  BereitschaftsMinuten?: number;
+  SummeTarif?: number;
+  SummeBeamter1?: number;
+  SummeBeamter2?: number;
+  SummeBeamter3?: number;
+  GeldwertBeamter?: number;
+}
+
+/**
+ * Bereitschaftszulage-Zwischenwerte (Phase 11, Nachtrag) -- Arithmetik aus
+ * `calculateBerechnungRows.ts` (Berechnung-Tab), aufgeschlüsselt in benannte Zwischenschritte für
+ * den Druck. `bereitschaftMinuten` (="Differenz BZ-BE" in Minuten) wird vom Aufrufer live aus den
+ * BZ-/BE-Zeilen desselben Exports berechnet, NICHT hier -- bewusst kein Storage-Zugriff (würde
+ * entweder veraltete Werte riskieren oder, um das zu vermeiden, ein `data:changed`-Event
+ * erzwingen müssen, das nebenbei einen kompletten AutoSave-Zyklus auslösen würde, siehe
+ * `infrastructure/autoSave/autoSave.ts`).
+ *
+ * `0` Minuten -> leeres Objekt (wie `IBerechnungMonatsErgebnis`: keine Anzeige statt `0` für einen
+ * Monat ganz ohne Bereitschaft). Nur EIN Zweig wird befüllt, der jeweils andere bleibt
+ * `undefined` -- reicht als "Anzeige abhängig von TB", ohne eigenes Sichtbarkeits-Feature.
+ * `SummeTarif` ist bewusst NICHT mit einem Satz multipliziert (reine Stundenzahl); nur
+ * `SummeBeamter3` ist ein Geldwert, `SummeBeamter1`/`SummeBeamter2` bleiben Ganzzahlen
+ * (Minuten bzw. Sätze).
+ */
+export function bereitschaftszulageAbgeleiteteWerte(
+  bereitschaftMinuten: number,
+  tarifKraft: TarifBesoldung,
+  geldMonat: Pick<IVorgabeValue, 'Besoldungsgruppe A 8' | 'Besoldungsgruppe A 9'>,
+): BereitschaftszulageWerte {
+  if (bereitschaftMinuten === 0) return {};
+  if (tarifKraft === 'Tarifkraft') {
+    return { BereitschaftsMinuten: bereitschaftMinuten, SummeTarif: Math.round(bereitschaftMinuten / 60) };
+  }
+  const summeBeamter1 = bereitschaftMinuten - 600;
+  const summeBeamter2 = Math.round(summeBeamter1 / 8 / 60);
+  const geldwertBeamter = geldMonat[tarifKraft] ?? 0;
+  return {
+    BereitschaftsMinuten: bereitschaftMinuten,
+    SummeBeamter1: summeBeamter1,
+    SummeBeamter2: summeBeamter2,
+    // Gerundet wie PrivatKmBetrag (Fließkomma-Rauschen, z.B. 11 * 16.37 === 180.07000000000002).
+    SummeBeamter3: Math.round(summeBeamter2 * geldwertBeamter * 100) / 100,
+    GeldwertBeamter: geldwertBeamter,
   };
 }
