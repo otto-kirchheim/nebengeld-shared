@@ -1,5 +1,5 @@
-import type { IDownloadEWT } from '../download';
-import { alsMinuten, FORMAT, ZEILEN_OPS } from './aggregatoren';
+import type { IDownloadBereitschaftseinsatz, IDownloadBereitschaftszeitraum, IDownloadEWT } from '../download';
+import { alsMinuten, alsZeitstempelMinuten, FORMAT, ZEILEN_OPS } from './aggregatoren';
 
 const STUNDE = 60;
 
@@ -56,4 +56,34 @@ export function ewtAbgeleiteteWerte(zeile: Pick<IDownloadEWT, 'abWE' | 'anWE' | 
     TkgSt8bis24: dauerErsteTkgSt > 8 * STUNDE && dauerErsteTkgSt <= 24 * STUNDE,
     TkgStUeber24: dauerErsteTkgSt > 24 * STUNDE,
   };
+}
+
+export interface BzAbgeleiteteWerte {
+  Dauer: string;
+}
+
+/**
+ * Dauer eines Bereitschaftszeitraums als HH:mm (Phase 11 PDF-Vorlagen-Pipeline) -- `Beginn`/`Ende`
+ * sind volle Zeitstempel (siehe `IDownloadBereitschaftszeitraum`), ein Zeitraum darf über Tage
+ * laufen, deshalb `zeitspanne` (keine Mitternachts-Korrektur wie bei `zeitdifferenz`). `Pause` wird
+ * abgezogen; `Math.max(0, ...)` fängt einen Dateneingabefehler ab (Pause länger als der Zeitraum),
+ * `FORMAT.stunden` liefert für eine negative Minutenzahl sonst Unsinn (`zweistellig(-5 % 60)`).
+ */
+export function bzAbgeleiteteWerte(zeile: Pick<IDownloadBereitschaftszeitraum, 'Beginn' | 'Ende' | 'Pause'>): BzAbgeleiteteWerte {
+  const minuten = ZEILEN_OPS.zeitspanne([alsZeitstempelMinuten(zeile.Ende), alsZeitstempelMinuten(zeile.Beginn)]) - zeile.Pause;
+  return { Dauer: FORMAT.stunden(Math.max(0, minuten)) };
+}
+
+export interface BeAbgeleiteteWerte {
+  Dauer: string;
+}
+
+/**
+ * Dauer eines Bereitschaftseinsatzes als HH:mm (Phase 11) -- `Beginn`/`Ende` sind reine
+ * `"HH:mm"`-Uhrzeiten eines Tages (siehe `IDownloadBereitschaftseinsatz`), deshalb `zeitdifferenz`
+ * (ergänzt über Mitternacht, wie bei `ewtAbgeleiteteWerte`).
+ */
+export function beAbgeleiteteWerte(zeile: Pick<IDownloadBereitschaftseinsatz, 'Beginn' | 'Ende'>): BeAbgeleiteteWerte {
+  const minuten = ZEILEN_OPS.zeitdifferenz([alsMinuten(zeile.Ende), alsMinuten(zeile.Beginn)]);
+  return { Dauer: FORMAT.stunden(minuten) };
 }

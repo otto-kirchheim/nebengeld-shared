@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test';
-import { ewtAbgeleiteteWerte } from '../../src/formular/abgeleiteteWerte';
+import { beAbgeleiteteWerte, bzAbgeleiteteWerte, ewtAbgeleiteteWerte } from '../../src/formular/abgeleiteteWerte';
 
 describe('ewtAbgeleiteteWerte', () => {
   it('berechnet DauerWohnung/DauerErsteTkgSt als HH:mm-Zeitspanne', () => {
@@ -73,5 +73,32 @@ describe('ewtAbgeleiteteWerte', () => {
     it('8h01 liegt im 8-24h-Band', () => {
       expect(werteFuer('08:01').TkgSt8bis24).toBe(true);
     });
+  });
+});
+
+describe('bzAbgeleiteteWerte', () => {
+  it('berechnet Dauer über Ende minus Beginn minus Pause', () => {
+    const werte = bzAbgeleiteteWerte({ Beginn: '2026-04-19T08:00:00.000Z', Ende: '2026-04-19T16:00:00.000Z', Pause: 30 });
+    expect(werte.Dauer).toBe('7:30');
+  });
+
+  it('läuft über Tage, ohne Mitternachts-Korrektur', () => {
+    const werte = bzAbgeleiteteWerte({ Beginn: '2026-04-19T08:00:00.000Z', Ende: '2026-04-22T08:00:00.000Z', Pause: 0 });
+    expect(werte.Dauer).toBe('72:00');
+  });
+
+  it('deckelt bei Pause länger als der Zeitraum auf 0:00 statt negativ', () => {
+    const werte = bzAbgeleiteteWerte({ Beginn: '2026-04-19T08:00:00.000Z', Ende: '2026-04-19T09:00:00.000Z', Pause: 90 });
+    expect(werte.Dauer).toBe('0:00');
+  });
+});
+
+describe('beAbgeleiteteWerte', () => {
+  it('berechnet Dauer über Ende minus Beginn', () => {
+    expect(beAbgeleiteteWerte({ Beginn: '01:15', Ende: '02:00' }).Dauer).toBe('0:45');
+  });
+
+  it('ergänzt über Mitternacht (Ende < Beginn)', () => {
+    expect(beAbgeleiteteWerte({ Beginn: '23:00', Ende: '01:00' }).Dauer).toBe('2:00');
   });
 });
