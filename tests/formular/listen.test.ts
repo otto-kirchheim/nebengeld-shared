@@ -59,6 +59,8 @@ describe('listenWert', () => {
 describe('loeseListenAuf', () => {
   const tabelle: TabellenDef = {
     quelle: 'Daten.N',
+    startY: 700,
+    maxZeilen: 10,
     hoehe: 14,
     spalten: [],
     listen: { erschwernis: gruppe },
@@ -71,7 +73,7 @@ describe('loeseListenAuf', () => {
   });
 
   it('liefert undefined für Tabellen ohne dynamische Spalten', () => {
-    expect(loeseListenAuf({ quelle: 'x', hoehe: 14, spalten: [] }, [])).toBeUndefined();
+    expect(loeseListenAuf({ quelle: 'x', startY: 700, maxZeilen: 10, hoehe: 14, spalten: [] }, [])).toBeUndefined();
   });
 
   it('schluesselAufPlatz liefert undefined für unbelegte Plätze', () => {

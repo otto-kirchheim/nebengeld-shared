@@ -10,7 +10,7 @@ function macheVersion(version: string, gueltigVon: string, gueltigBis: string | 
     gueltigVon,
     gueltigBis,
     layout: leeresLayout,
-    tabellen: { haupt: { quelle: 'zeilen', hoehe: 12, spalten: [] } },
+    tabellen: { haupt: { quelle: 'zeilen', startY: 700, maxZeilen: 10, hoehe: 12, spalten: [] } },
   };
 }
 

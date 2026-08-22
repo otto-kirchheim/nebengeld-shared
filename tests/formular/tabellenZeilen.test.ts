@@ -15,6 +15,8 @@ const daten: Daten = {
 
 const mitDauer: TabellenDef = {
   quelle: 'Daten.BE',
+  startY: 700,
+  maxZeilen: 10,
   hoehe: 14,
   spalten: [
     { key: 'Tag', x: 50, size: 9 },
@@ -46,7 +48,7 @@ describe('tabellenZeilen', () => {
   });
 
   it('ohne berechnete Spalten bleiben die Originalzeilen erhalten (keine unnoetige Kopie)', () => {
-    const schlicht: TabellenDef = { quelle: 'Daten.BE', hoehe: 14, spalten: [{ key: 'Tag', x: 50, size: 9 }] };
+    const schlicht: TabellenDef = { quelle: 'Daten.BE', startY: 700, maxZeilen: 10, hoehe: 14, spalten: [{ key: 'Tag', x: 50, size: 9 }] };
     const roh = (daten.Daten as { BE: Record<string, unknown>[] }).BE[0]!;
     expect(tabellenZeilen(daten, schlicht)[0]).toBe(roh as never);
   });
@@ -54,6 +56,8 @@ describe('tabellenZeilen', () => {
   it('Ankreuz-Spalten fuellen ihr Ergebnis (das gedruckte Zeichen, sonst leer) in die Zeile', () => {
     const ankreuz: TabellenDef = {
       quelle: 'Daten.BE',
+      startY: 700,
+      maxZeilen: 10,
       hoehe: 14,
       spalten: [{ key: 'LRE1', x: 50, size: 9, wenn: { feld: 'LRE', werte: ['LRE 1'], dann: 'X' } }],
     };
@@ -64,6 +68,8 @@ describe('tabellenZeilen', () => {
   it('mit numerischem "dann" zaehlt eine Summe ueber eine Ankreuz-Spalte die zutreffenden Zeilen', () => {
     const ankreuz: TabellenDef = {
       quelle: 'Daten.BE',
+      startY: 700,
+      maxZeilen: 10,
       hoehe: 14,
       spalten: [{ key: 'LRE1', x: 50, size: 9, wenn: { feld: 'LRE', werte: ['LRE 1', 'LRE 2'], dann: '1' } }],
     };
@@ -75,6 +81,8 @@ describe('tabellenZeilen', () => {
   it('eine Ankreuz-Spalte mit berechnetem Wert und Wertebereich fuellt ihr Ergebnis ebenso in die Zeile', () => {
     const ankreuzBereich: TabellenDef = {
       quelle: 'Daten.BE',
+      startY: 700,
+      maxZeilen: 10,
       hoehe: 14,
       spalten: [{ key: 'lang', x: 50, size: 9, wenn: { berechnet: { op: 'zeitdifferenz', operanden: ['Ende', 'Beginn'] }, bereich: { von: 150, bis: 200 }, dann: '1' } }],
     };

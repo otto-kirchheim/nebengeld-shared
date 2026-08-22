@@ -230,18 +230,28 @@ export interface TabellenDef {
   quelle: string;
   /** nur Zeilen behalten, deren `feld` einen der `werte` trägt */
   filter?: { feld: string; werte: (string | number)[] };
+  /** Globaler Standard für Seiten ohne eigenen Wert, siehe `TabellenBereich.startY`. */
+  startY: number;
+  /** Globaler Standard für Seiten ohne eigenen Wert, siehe `TabellenBereich.maxZeilen`. */
+  maxZeilen: number;
   hoehe: number;
   spalten: Spalte[];
   /** Dynamische Spaltengruppen dieser Tabelle (EZ: Erschwerniszulagen, Leistungsprämie, GKR) */
   listen?: Record<string, ListenGruppe>;
 }
 
-/** Platz, den eine Tabelle auf einer konkreten Seite einnimmt. */
+/**
+ * Platz, den eine Tabelle auf einer konkreten Seite einnimmt. `tabelle` ist das einzige
+ * Pflichtfeld -- alles andere ist ein optionaler Seiten-Override, ohne Angabe gilt jeweils der
+ * globale Wert der Tabelle (`TabellenDef`). Deckt Vorlagen ab, deren Seiten sich in Position,
+ * Zeilenhöhe, Zeilenzahl oder Spaltenraster unterscheiden (z.B. eine Übertragsspalte nur auf
+ * Folgeseiten), ohne identische Werte auf jeder Seite wiederholen zu müssen.
+ */
 export interface TabellenBereich {
   /** Key in `Version.tabellen` */
   tabelle: string;
-  startY: number;
-  maxZeilen: number;
+  startY?: number;
+  maxZeilen?: number;
   /**
    * Eigene Spalten NUR für diese Seite; ohne Angabe gelten die der Tabelle. Deckt Vorlagen ab,
    * deren Folgeseite ein anderes Spaltenraster hat (andere Breiten oder gar andere Spalten als die
@@ -251,6 +261,7 @@ export interface TabellenBereich {
    * `TabellenDef.spalten`.
    */
   spalten?: Spalte[];
+  hoehe?: number;
 }
 
 export interface SeitenDef {
