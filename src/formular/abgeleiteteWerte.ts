@@ -79,13 +79,27 @@ export function bzAbgeleiteteWerte(zeile: Pick<IDownloadBereitschaftszeitraum, '
 export interface BeAbgeleiteteWerte {
   /** Minuten, nicht HH:mm -- siehe Modulkommentar. */
   Dauer: number;
+  /** Euro, auf 2 Nachkommastellen gerundet. */
+  PrivatKmBetrag: number;
 }
 
 /**
- * Dauer eines Bereitschaftseinsatzes in Minuten (Phase 11) -- `Beginn`/`Ende` sind reine
+ * Dauer und Privat-km-Betrag eines Bereitschaftseinsatzes (Phase 11) -- `Beginn`/`Ende` sind reine
  * `"HH:mm"`-Uhrzeiten eines Tages (siehe `IDownloadBereitschaftseinsatz`), deshalb `zeitdifferenz`
  * (ergänzt über Mitternacht, wie bei `ewtAbgeleiteteWerte`).
+ *
+ * `privatKmSatz` (Euro/km) kommt vorberechnet vom Aufrufer -- welcher Satz gilt (Tarifkraft vs.
+ * Beamter, `VorgabenGeld.PrivatPKWTarif`/`PrivatPKWBeamter`) ist reine Konfigurations-Auswahl ohne
+ * eigene Testlogik, anders als die Zeitband-Schwellen bei `ewtAbgeleiteteWerte`, deshalb hier kein
+ * eigener `beamter`-Parameter. `Math.round(... * 100) / 100` vermeidet Fließkomma-Rauschen (z.B.
+ * `12 * 0.27`), das sich über mehrere Zeilen zu einer sichtbar falschen Summe aufaddieren würde.
  */
-export function beAbgeleiteteWerte(zeile: Pick<IDownloadBereitschaftseinsatz, 'Beginn' | 'Ende'>): BeAbgeleiteteWerte {
-  return { Dauer: ZEILEN_OPS.zeitdifferenz([alsMinuten(zeile.Ende), alsMinuten(zeile.Beginn)]) };
+export function beAbgeleiteteWerte(
+  zeile: Pick<IDownloadBereitschaftseinsatz, 'Beginn' | 'Ende' | 'PrivatKm'>,
+  privatKmSatz: number,
+): BeAbgeleiteteWerte {
+  return {
+    Dauer: ZEILEN_OPS.zeitdifferenz([alsMinuten(zeile.Ende), alsMinuten(zeile.Beginn)]),
+    PrivatKmBetrag: Math.round(zeile.PrivatKm * privatKmSatz * 100) / 100,
+  };
 }

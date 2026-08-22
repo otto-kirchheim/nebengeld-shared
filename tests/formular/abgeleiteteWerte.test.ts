@@ -95,10 +95,22 @@ describe('bzAbgeleiteteWerte', () => {
 
 describe('beAbgeleiteteWerte', () => {
   it('berechnet Dauer in Minuten über Ende minus Beginn', () => {
-    expect(beAbgeleiteteWerte({ Beginn: '01:15', Ende: '02:00' }).Dauer).toBe(45);
+    expect(beAbgeleiteteWerte({ Beginn: '01:15', Ende: '02:00', PrivatKm: 0 }, 0).Dauer).toBe(45);
   });
 
   it('ergänzt über Mitternacht (Ende < Beginn)', () => {
-    expect(beAbgeleiteteWerte({ Beginn: '23:00', Ende: '01:00' }).Dauer).toBe(120);
+    expect(beAbgeleiteteWerte({ Beginn: '23:00', Ende: '01:00', PrivatKm: 0 }, 0).Dauer).toBe(120);
+  });
+
+  it('berechnet PrivatKmBetrag über PrivatKm mal Satz', () => {
+    expect(beAbgeleiteteWerte({ Beginn: '01:00', Ende: '02:00', PrivatKm: 12 }, 0.27).PrivatKmBetrag).toBe(3.24);
+  });
+
+  it('rundet auf 2 Nachkommastellen (Fließkomma-Rauschen, 13 * 0.27 === 3.5100000000000002)', () => {
+    expect(beAbgeleiteteWerte({ Beginn: '01:00', Ende: '02:00', PrivatKm: 13 }, 0.27).PrivatKmBetrag).toBe(3.51);
+  });
+
+  it('liefert 0 ohne Privat-km', () => {
+    expect(beAbgeleiteteWerte({ Beginn: '01:00', Ende: '02:00', PrivatKm: 0 }, 0.27).PrivatKmBetrag).toBe(0);
   });
 });

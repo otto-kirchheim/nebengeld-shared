@@ -52,7 +52,11 @@ export type IDownloadBereitschaftszeitraum = Required<Omit<IBereitschaftszeitrau
 
 // Hinweis: `Tag` ist hier `"DD.MM.YYYY"` formatiert statt ISO-Date wie im
 // domain-Basistyp -- Download-Business-Logik formatiert es um, kein Typ-Diff.
-export type IDownloadBereitschaftseinsatz = Required<Omit<IBereitschaftseinsatz, '_id' | 'Bereitschaftszeitraum'>> & { Dauer?: number };
+// `PrivatKmBetrag` (Euro, Tarifkraft-/Beamter-Satz aus VorgabenGeld) ebenfalls optional, siehe Dauer.
+export type IDownloadBereitschaftseinsatz = Required<Omit<IBereitschaftseinsatz, '_id' | 'Bereitschaftszeitraum'>> & {
+  Dauer?: number;
+  PrivatKmBetrag?: number;
+};
 
 export interface IDownloadEWT {
   Buchungstag: number;
