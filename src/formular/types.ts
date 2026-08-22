@@ -43,10 +43,11 @@ export interface Berechnet {
   ueber: string;
   feld?: string;
   /**
-   * Beschränkt eine `$seite`/`$bisher`/`$alle`-Summe auf EINE Tabelle (Key in `Version.tabellen`).
-   * Ohne Angabe laufen die Zeilen aller Tabellen zusammen in die Rechnung.
+   * Beschränkt eine `$seite`/`$bisher`/`$alle`-Summe auf eine oder mehrere Tabellen (Keys in
+   * `Version.tabellen`) -- ihre Zeilen laufen dann zusammen in EINE Rechnung. Ohne Angabe (oder
+   * leeres Array) laufen die Zeilen ALLER Tabellen der Version zusammen.
    */
-  tabelle?: string;
+  tabellen?: string[];
   /**
    * Nur für `letztesDatum`: Höchstalter des jüngsten Eintrags in Tagen. Ist er älter — oder gibt es
    * gar keine Zeilen —, wird stattdessen das heutige Datum genommen. Gedacht für das Datum neben
