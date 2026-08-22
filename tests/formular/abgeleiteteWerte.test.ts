@@ -77,28 +77,28 @@ describe('ewtAbgeleiteteWerte', () => {
 });
 
 describe('bzAbgeleiteteWerte', () => {
-  it('berechnet Dauer über Ende minus Beginn minus Pause', () => {
+  it('berechnet Dauer in Minuten über Ende minus Beginn minus Pause', () => {
     const werte = bzAbgeleiteteWerte({ Beginn: '2026-04-19T08:00:00.000Z', Ende: '2026-04-19T16:00:00.000Z', Pause: 30 });
-    expect(werte.Dauer).toBe('7:30');
+    expect(werte.Dauer).toBe(450);
   });
 
   it('läuft über Tage, ohne Mitternachts-Korrektur', () => {
     const werte = bzAbgeleiteteWerte({ Beginn: '2026-04-19T08:00:00.000Z', Ende: '2026-04-22T08:00:00.000Z', Pause: 0 });
-    expect(werte.Dauer).toBe('72:00');
+    expect(werte.Dauer).toBe(4320);
   });
 
-  it('deckelt bei Pause länger als der Zeitraum auf 0:00 statt negativ', () => {
+  it('deckelt bei Pause länger als der Zeitraum auf 0 statt negativ', () => {
     const werte = bzAbgeleiteteWerte({ Beginn: '2026-04-19T08:00:00.000Z', Ende: '2026-04-19T09:00:00.000Z', Pause: 90 });
-    expect(werte.Dauer).toBe('0:00');
+    expect(werte.Dauer).toBe(0);
   });
 });
 
 describe('beAbgeleiteteWerte', () => {
-  it('berechnet Dauer über Ende minus Beginn', () => {
-    expect(beAbgeleiteteWerte({ Beginn: '01:15', Ende: '02:00' }).Dauer).toBe('0:45');
+  it('berechnet Dauer in Minuten über Ende minus Beginn', () => {
+    expect(beAbgeleiteteWerte({ Beginn: '01:15', Ende: '02:00' }).Dauer).toBe(45);
   });
 
   it('ergänzt über Mitternacht (Ende < Beginn)', () => {
-    expect(beAbgeleiteteWerte({ Beginn: '23:00', Ende: '01:00' }).Dauer).toBe('2:00');
+    expect(beAbgeleiteteWerte({ Beginn: '23:00', Ende: '01:00' }).Dauer).toBe(120);
   });
 });

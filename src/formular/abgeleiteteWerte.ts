@@ -59,31 +59,33 @@ export function ewtAbgeleiteteWerte(zeile: Pick<IDownloadEWT, 'abWE' | 'anWE' | 
 }
 
 export interface BzAbgeleiteteWerte {
-  Dauer: string;
+  /** Minuten, nicht HH:mm -- siehe Modulkommentar. */
+  Dauer: number;
 }
 
 /**
- * Dauer eines Bereitschaftszeitraums als HH:mm (Phase 11 PDF-Vorlagen-Pipeline) -- `Beginn`/`Ende`
- * sind volle Zeitstempel (siehe `IDownloadBereitschaftszeitraum`), ein Zeitraum darf über Tage
- * laufen, deshalb `zeitspanne` (keine Mitternachts-Korrektur wie bei `zeitdifferenz`). `Pause` wird
- * abgezogen; `Math.max(0, ...)` fängt einen Dateneingabefehler ab (Pause länger als der Zeitraum),
- * `FORMAT.stunden` liefert für eine negative Minutenzahl sonst Unsinn (`zweistellig(-5 % 60)`).
+ * Dauer eines Bereitschaftszeitraums in Minuten (Phase 11 PDF-Vorlagen-Pipeline) -- bewusst eine
+ * Zahl statt `FORMAT.stunden`-Text (anders als bei EWT), User-Vorgabe. `Beginn`/`Ende` sind volle
+ * Zeitstempel (siehe `IDownloadBereitschaftszeitraum`), ein Zeitraum darf über Tage laufen, deshalb
+ * `zeitspanne` (keine Mitternachts-Korrektur wie bei `zeitdifferenz`). `Pause` wird abgezogen;
+ * `Math.max(0, ...)` fängt einen Dateneingabefehler ab (Pause länger als der Zeitraum) statt eine
+ * negative Minutenzahl auszugeben.
  */
 export function bzAbgeleiteteWerte(zeile: Pick<IDownloadBereitschaftszeitraum, 'Beginn' | 'Ende' | 'Pause'>): BzAbgeleiteteWerte {
   const minuten = ZEILEN_OPS.zeitspanne([alsZeitstempelMinuten(zeile.Ende), alsZeitstempelMinuten(zeile.Beginn)]) - zeile.Pause;
-  return { Dauer: FORMAT.stunden(Math.max(0, minuten)) };
+  return { Dauer: Math.max(0, minuten) };
 }
 
 export interface BeAbgeleiteteWerte {
-  Dauer: string;
+  /** Minuten, nicht HH:mm -- siehe Modulkommentar. */
+  Dauer: number;
 }
 
 /**
- * Dauer eines Bereitschaftseinsatzes als HH:mm (Phase 11) -- `Beginn`/`Ende` sind reine
+ * Dauer eines Bereitschaftseinsatzes in Minuten (Phase 11) -- `Beginn`/`Ende` sind reine
  * `"HH:mm"`-Uhrzeiten eines Tages (siehe `IDownloadBereitschaftseinsatz`), deshalb `zeitdifferenz`
  * (ergänzt über Mitternacht, wie bei `ewtAbgeleiteteWerte`).
  */
 export function beAbgeleiteteWerte(zeile: Pick<IDownloadBereitschaftseinsatz, 'Beginn' | 'Ende'>): BeAbgeleiteteWerte {
-  const minuten = ZEILEN_OPS.zeitdifferenz([alsMinuten(zeile.Ende), alsMinuten(zeile.Beginn)]);
-  return { Dauer: FORMAT.stunden(minuten) };
+  return { Dauer: ZEILEN_OPS.zeitdifferenz([alsMinuten(zeile.Ende), alsMinuten(zeile.Beginn)]) };
 }

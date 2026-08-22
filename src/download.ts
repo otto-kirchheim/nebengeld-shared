@@ -47,12 +47,12 @@ export interface IDownloadBase {
 
 // `Dauer` (Phase 11 PDF-Vorlagen-Pipeline, siehe formular/abgeleiteteWerte.ts) ist optional, damit
 // der alte Backend-Downloadpfad (ohne diese Anreicherung) unveraendert gueltig bleibt -- analog
-// zu den Phase-10-Feldern in `IDownloadEWT`.
-export type IDownloadBereitschaftszeitraum = Required<Omit<IBereitschaftszeitraum, '_id'>> & { Dauer?: string };
+// zu den Phase-10-Feldern in `IDownloadEWT`. Bewusst `number` (Minuten), nicht `"HH:mm"` wie bei EWT.
+export type IDownloadBereitschaftszeitraum = Required<Omit<IBereitschaftszeitraum, '_id'>> & { Dauer?: number };
 
 // Hinweis: `Tag` ist hier `"DD.MM.YYYY"` formatiert statt ISO-Date wie im
 // domain-Basistyp -- Download-Business-Logik formatiert es um, kein Typ-Diff.
-export type IDownloadBereitschaftseinsatz = Required<Omit<IBereitschaftseinsatz, '_id' | 'Bereitschaftszeitraum'>> & { Dauer?: string };
+export type IDownloadBereitschaftseinsatz = Required<Omit<IBereitschaftseinsatz, '_id' | 'Bereitschaftszeitraum'>> & { Dauer?: number };
 
 export interface IDownloadEWT {
   Buchungstag: number;
