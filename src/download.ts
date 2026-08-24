@@ -102,6 +102,7 @@ export interface IBereitschaftszeitraumDownloadBody extends IDownloadBase {
   // Datei importiert bereits Typen VON hier (IDownloadBereitschaftseinsatz etc.), ein Rückimport
   // würde einen Zyklus erzeugen. Struktur muss manuell synchron gehalten werden.
   Bereitschaftszulage?: {
+    TarifBeamter?: 'Tarifkraft' | 'Beamter';
     BereitschaftsMinuten?: number;
     SummeTarif?: number;
     SummeBeamter1?: number;

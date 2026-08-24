@@ -219,6 +219,11 @@ export function summeBereinigtGruppe(rows: Zeile[], gruppe: Pick<ListenGruppe, '
 }
 
 export interface BereitschaftszulageWerte {
+  /** Tarifkraft/Beamter als eigenständiges Druckfeld -- `tarifKraft` selbst ist einer von drei
+   * `TB_VALUES` (zwei Besoldungsgruppen + Tarifkraft), fürs PDF zählt aber nur diese Unterscheidung
+   * (Konvention im Rest der Codebase: Beamter = `TB !== 'Tarifkraft'`). Immer gesetzt, unabhängig
+   * von `bereitschaftMinuten`. */
+  TarifBeamter: 'Tarifkraft' | 'Beamter';
   BereitschaftsMinuten?: number;
   SummeTarif?: number;
   SummeBeamter1?: number;
@@ -236,26 +241,28 @@ export interface BereitschaftszulageWerte {
  * erzwingen müssen, das nebenbei einen kompletten AutoSave-Zyklus auslösen würde, siehe
  * `infrastructure/autoSave/autoSave.ts`).
  *
- * `0` Minuten -> leeres Objekt (wie `IBerechnungMonatsErgebnis`: keine Anzeige statt `0` für einen
- * Monat ganz ohne Bereitschaft). Nur EIN Zweig wird befüllt, der jeweils andere bleibt
- * `undefined` -- reicht als "Anzeige abhängig von TB", ohne eigenes Sichtbarkeits-Feature.
- * `SummeTarif` ist bewusst NICHT mit einem Satz multipliziert (reine Stundenzahl); nur
- * `SummeBeamter3` ist ein Geldwert, `SummeBeamter1`/`SummeBeamter2` bleiben Ganzzahlen
- * (Minuten bzw. Sätze).
+ * `0` Minuten -> nur `TarifBeamter` gesetzt (wie `IBerechnungMonatsErgebnis`: keine Anzeige statt
+ * `0` für einen Monat ganz ohne Bereitschaft). Von den Geld-Zwischenwerten wird nur EIN Zweig
+ * befüllt, der jeweils andere bleibt `undefined` -- reicht als "Anzeige abhängig von TB", ohne
+ * eigenes Sichtbarkeits-Feature. `SummeTarif` ist bewusst NICHT mit einem Satz multipliziert (reine
+ * Stundenzahl); nur `SummeBeamter3` ist ein Geldwert, `SummeBeamter1`/`SummeBeamter2` bleiben
+ * Ganzzahlen (Minuten bzw. Sätze).
  */
 export function bereitschaftszulageAbgeleiteteWerte(
   bereitschaftMinuten: number,
   tarifKraft: TarifBesoldung,
   geldMonat: Pick<IVorgabeValue, 'Besoldungsgruppe A 8' | 'Besoldungsgruppe A 9'>,
 ): BereitschaftszulageWerte {
-  if (bereitschaftMinuten === 0) return {};
+  const tarifBeamter = tarifKraft === 'Tarifkraft' ? 'Tarifkraft' : 'Beamter';
+  if (bereitschaftMinuten === 0) return { TarifBeamter: tarifBeamter };
   if (tarifKraft === 'Tarifkraft') {
-    return { BereitschaftsMinuten: bereitschaftMinuten, SummeTarif: Math.round(bereitschaftMinuten / 60) };
+    return { TarifBeamter: tarifBeamter, BereitschaftsMinuten: bereitschaftMinuten, SummeTarif: Math.round(bereitschaftMinuten / 60) };
   }
   const summeBeamter1 = bereitschaftMinuten - 600;
   const summeBeamter2 = Math.round(summeBeamter1 / 8 / 60);
   const geldwertBeamter = geldMonat[tarifKraft] ?? 0;
   return {
+    TarifBeamter: tarifBeamter,
     BereitschaftsMinuten: bereitschaftMinuten,
     SummeBeamter1: summeBeamter1,
     SummeBeamter2: summeBeamter2,

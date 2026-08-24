@@ -257,9 +257,17 @@ describe('summeBereinigtGruppe (Std.-Gesamtsumme über alle Einträge einer List
 });
 
 describe('bereitschaftszulageAbgeleiteteWerte', () => {
-  it('liefert ein leeres Objekt ohne Bereitschaftsminuten', () => {
-    expect(bereitschaftszulageAbgeleiteteWerte(0, 'Tarifkraft', {})).toEqual({});
-    expect(bereitschaftszulageAbgeleiteteWerte(0, 'Besoldungsgruppe A 8', {})).toEqual({});
+  it('liefert nur TarifBeamter ohne Bereitschaftsminuten', () => {
+    expect(bereitschaftszulageAbgeleiteteWerte(0, 'Tarifkraft', {})).toEqual({ TarifBeamter: 'Tarifkraft' });
+    expect(bereitschaftszulageAbgeleiteteWerte(0, 'Besoldungsgruppe A 8', {})).toEqual({ TarifBeamter: 'Beamter' });
+  });
+
+  describe('TarifBeamter', () => {
+    it('Tarifkraft bleibt Tarifkraft, jede Besoldungsgruppe wird zu Beamter', () => {
+      expect(bereitschaftszulageAbgeleiteteWerte(0, 'Tarifkraft', {}).TarifBeamter).toBe('Tarifkraft');
+      expect(bereitschaftszulageAbgeleiteteWerte(0, 'Besoldungsgruppe A 8', {}).TarifBeamter).toBe('Beamter');
+      expect(bereitschaftszulageAbgeleiteteWerte(0, 'Besoldungsgruppe A 9', {}).TarifBeamter).toBe('Beamter');
+    });
   });
 
   describe('Tarifkraft-Zweig', () => {
@@ -267,7 +275,7 @@ describe('bereitschaftszulageAbgeleiteteWerte', () => {
       // Gegenprobe: dieselben 6000 Minuten wie in Berechnung.calculateBerechnungRows.test.ts
       // (dort bereitschaftMinuten: 6000, bereitschaftAnzeige: '100:00').
       const werte = bereitschaftszulageAbgeleiteteWerte(6000, 'Tarifkraft', {});
-      expect(werte).toEqual({ BereitschaftsMinuten: 6000, SummeTarif: 100 });
+      expect(werte).toEqual({ TarifBeamter: 'Tarifkraft', BereitschaftsMinuten: 6000, SummeTarif: 100 });
     });
 
     it('rundet auf ganze Stunden', () => {
@@ -289,6 +297,7 @@ describe('bereitschaftszulageAbgeleiteteWerte', () => {
       const werte = bereitschaftszulageAbgeleiteteWerte(6000, 'Besoldungsgruppe A 8', { 'Besoldungsgruppe A 8': 16.37 });
       // 6000 - 600 = 5400; 5400 / 8 / 60 = 11,25 -> 11; 11 * 16,37 = 180,07.
       expect(werte).toEqual({
+        TarifBeamter: 'Beamter',
         BereitschaftsMinuten: 6000,
         SummeBeamter1: 5400,
         SummeBeamter2: 11,
@@ -300,6 +309,7 @@ describe('bereitschaftszulageAbgeleiteteWerte', () => {
     it('Besoldungsgruppe A 9: eigener Satz, dynamische Schlüssel-Auswahl', () => {
       const werte = bereitschaftszulageAbgeleiteteWerte(6000, 'Besoldungsgruppe A 9', { 'Besoldungsgruppe A 9': 22.49 });
       expect(werte).toEqual({
+        TarifBeamter: 'Beamter',
         BereitschaftsMinuten: 6000,
         SummeBeamter1: 5400,
         SummeBeamter2: 11,
