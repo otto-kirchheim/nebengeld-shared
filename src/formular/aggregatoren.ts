@@ -12,6 +12,36 @@ export function alsZahl(v: unknown): number {
   return Number(v) || 0;
 }
 
+/**
+ * Summe der `wert`-Felder aller Listen-Einträge (z.B. EZ: `Zulagen`) über mehrere Zeilen, gefiltert
+ * auf EINEN Schlüssel (`Berechnet.liste`) -- ein flaches `feld` (siehe `OPS.summe`) kann keinen
+ * Wert lesen, der erst innerhalb einer verschachtelten Liste steckt. Zeilen ohne die Liste oder mit
+ * einem nicht-Array-Wert dort tragen 0 bei, statt zu werfen -- eine Tabelle ohne diese Spaltengruppe
+ * soll die Summe nicht abbrechen lassen.
+ */
+export function summeUeberListe(rows: Zeile[], liste: { quelle: string; schluessel: string; wert: string; code: string }): number {
+  return rows.reduce((summe, zeile) => {
+    const eintraege = zeile[liste.quelle];
+    if (!Array.isArray(eintraege)) return summe;
+    const treffer = eintraege.filter((e): e is Zeile => (e as Zeile)[liste.schluessel] === liste.code);
+    return summe + treffer.reduce((s, e) => s + alsZahl(e[liste.wert]), 0);
+  }, 0);
+}
+
+/**
+ * Rohe Gesamtsumme ALLER Einträge einer Listen-Gruppe, unabhängig vom Code (Gegenstück zu
+ * `summeUeberListe()`, die auf EINEN Code filtert) -- Grundlage von `Berechnet.liste` ohne `index`
+ * bei `art: 'summe'`. Mischt Minuten und Stückzahlen, wenn die Gruppe beide Einheiten enthält --
+ * das liegt in der Verantwortung der Konfiguration, genau wie bei einer normalen Spaltensumme.
+ */
+export function summeGruppe(rows: Zeile[], gruppe: { quelle: string; wert: string }): number {
+  return rows.reduce((summe, zeile) => {
+    const eintraege = zeile[gruppe.quelle];
+    if (!Array.isArray(eintraege)) return summe;
+    return summe + eintraege.reduce((s, e) => s + alsZahl((e as Zeile)[gruppe.wert]), 0);
+  }, 0);
+}
+
 export const OPS: Record<OpName, Aggregator> = {
   summe: (rows, feld) => rows.reduce((s, r) => s + alsZahl(r[feld!]), 0),
   anzahl: rows => rows.length,
@@ -188,7 +218,7 @@ function zweistellig(n: number): string {
 const MONATSNAMEN = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
 
 export const FORMAT: Record<FormatName, (v: unknown) => string> = {
-  waehrung: v => Number(v).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+  waehrung: v => `${Number(v).toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`,
   zahl: v => Number(v).toLocaleString('de-DE', { maximumFractionDigits: 2 }),
   ganzzahl: v => Math.round(Number(v) || 0).toLocaleString('de-DE'),
 

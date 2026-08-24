@@ -55,6 +55,25 @@ export interface Berechnet {
    * zurückliegt, sonst heute. Ohne Angabe bleibt es immer beim letzten Eintrag.
    */
   maxTage?: number;
+  /**
+   * Summe über einen dynamischen Spaltenplatz (siehe `Feld.listenKopf`/`ListenPlatz`), NICHT über
+   * einen festen Code: welcher Zulagen-Code an Platz `index` einer Gruppe landet, steht erst mit den
+   * Daten des Monats fest (`schluesselAufPlatz()`/`listenBelegung()` in `listen.ts`) -- ein fest
+   * eingetragener Code würde von Monat zu Monat an der Spaltenüberschrift vorbeirechnen, sobald sich
+   * die Platzbelegung verschiebt (z.B. weil ein Code diesen Monat gar nicht vorkommt). Summiert wird
+   * deshalb IMMER über denselben, zur Laufzeit aufgelösten Code wie die zugehörige Kopfzeile. Nur
+   * für `op: 'summe'` vorgesehen; `feld` bleibt dabei leer.
+   *
+   * `art` (Default `'summe'`, gleiche Werte wie `SonderZeileZelle.art` ohne `'kopf'`): `'summe'`
+   * roh (Minuten/Stück), `'bereinigt'` Minuten-Codes auf volle Stunden gerundet (Stück-Codes tragen
+   * `0` bei, siehe `bereinigteZulagenStunden()`), `'summeGeld'` Umrechnung in Euro über
+   * `geldwertZulagenCode()` (repliziert `calculateBerechnungRows.ts`s `N_ZULAGEN_CALC`-Formel je
+   * `paymentHint`).
+   *
+   * Ohne `index`: Gesamtsumme über ALLE Einträge der Gruppe, jeder mit seinem EIGENEN Code statt
+   * einem Platz-Code -- `art` gilt genauso, angewandt auf jeden Eintrag einzeln vor der Summierung.
+   */
+  liste?: { tabelle: string; gruppe: string; index?: number; art?: Exclude<SonderZeileArt, 'kopf'> };
 }
 
 /**
@@ -168,6 +187,9 @@ export interface Feld {
   listenKopf?: ListenPlatz & { tabelle: string };
   /** Dreht den Text in der Zelle; 90° liest von unten nach oben (schmale Kopfspalten). */
   drehung?: Drehung;
+  fett?: boolean;
+  kursiv?: boolean;
+  unterstrichen?: boolean;
   /** nur für die Eingabemaske im Admin-Editor, für den Renderer irrelevant */
   label?: string;
 }
@@ -201,6 +223,56 @@ export interface ListenGruppe {
   beschriftungen?: Record<string, string>;
 }
 
+export type SonderZeileArt = 'kopf' | 'summe' | 'bereinigt' | 'summeGeld';
+
+/**
+ * Eine Zelle einer `SonderZeile`: referenziert eine Spalte statt eigener Koordinaten -- die
+ * x-Position kommt beim Rendern von genau dieser Spalte, nur die y-Position kommt von der
+ * Platzierung (`TabellenBereich.sonderzeilen`). `bereinigt`/`summeGeld` ergeben nur bei einer
+ * Spalte mit `listenPlatz` einen Wert (siehe `sonderZeileZelleWert()` in `wert.ts`).
+ *
+ * Bezug über die Position in `TabellenDef.spalten`, NICHT über `Spalte.key`: der bleibt bei vielen
+ * Spaltenarten leer und mehrfach vergeben -- dynamische Spalten (`listenPlatz`) UND Ankreuz-Spalten
+ * (`wenn`, deren Wert erst je Zeile aus der Bedingung entsteht) brauchen beide keinen flachen
+ * Zeilenpfad und bleiben in der Praxis regelmäßig ohne `key`. Ein Bezug über `key` könnte sie dann
+ * nicht unterscheiden -- betroffen wären z.B. alle sechs EWT-Zeitband-Ankreuzspalten auf einmal.
+ */
+export interface SonderZeileZelle {
+  /** Index in `TabellenDef.spalten`. */
+  spaltenIndex: number;
+  art: SonderZeileArt;
+  /** Ohne Angabe gilt `Spalte.format` -- eine Summen-/€-Zeile braucht praktisch immer ein eigenes,
+   *  weil die Spalte selbst den Rohwert unformatiert zeigt. */
+  format?: FormatName;
+  /** Ohne Angabe gilt `Spalte.size` -- eine Summenzeile will oft eine andere Schriftgröße als die
+   *  Datenzeilen (z.B. fett/größer für die Gesamtsumme). */
+  size?: number;
+  /** Ohne Angabe gilt `Spalte.align`. */
+  align?: Ausrichtung;
+  /** Ohne Angabe gilt `Spalte.autoGroesse`. */
+  autoGroesse?: boolean;
+  /** Ohne Angabe gilt `Spalte.fett`. */
+  fett?: boolean;
+  /** Ohne Angabe gilt `Spalte.kursiv`. */
+  kursiv?: boolean;
+  /** Ohne Angabe gilt `Spalte.unterstrichen`. */
+  unterstrichen?: boolean;
+}
+
+/**
+ * Kopf- oder Fußzeile EINER Tabelle, die für mehrere Spalten auf einmal "was steht hier" festlegt
+ * -- Gegenstück zu 44 einzeln platzierten `Feld`-Einträgen bei EZ (elf Zulagen-Spaltenplätze mal
+ * Überschrift/Summe/bereinigte Summe/Summe in Euro). Inhalt (diese Struktur) und Platzierung
+ * (`TabellenBereich.sonderzeilen`) sind getrennt: dieselbe Sonderzeile kann auf einer Seite mehrfach
+ * erscheinen (z.B. Überschrift oben UND als Kopie unten), ohne die Spaltenzuordnung zu duplizieren.
+ */
+export interface SonderZeile {
+  /** Wie `Berechnet.ueber` ($seite/$bisher/$laufend/$alle) -- nur für summe/bereinigt/summeGeld
+   *  relevant, bei einer reinen Kopf-Zeile ungenutzt. Fehlt der Wert, gilt `$alle`. */
+  ueber?: string;
+  zellen: SonderZeileZelle[];
+}
+
 export interface Spalte {
   key: string;
   x: number;
@@ -218,6 +290,9 @@ export interface Spalte {
   /** Dynamischer Platz aus einer `ListenGruppe` statt eines festen Zeilenfelds (siehe dort) */
   listenPlatz?: ListenPlatz;
   drehung?: Drehung;
+  fett?: boolean;
+  kursiv?: boolean;
+  unterstrichen?: boolean;
   label?: string;
 }
 
@@ -238,6 +313,9 @@ export interface TabellenDef {
   spalten: Spalte[];
   /** Dynamische Spaltengruppen dieser Tabelle (EZ: Erschwerniszulagen, Leistungsprämie, GKR) */
   listen?: Record<string, ListenGruppe>;
+  /** Kopf-/Fußzeilen-Inhalte dieser Tabelle, adressiert über ihren Namen (siehe `SonderZeile`) --
+   *  WO sie erscheinen, legt `TabellenBereich.sonderzeilen` je Seite fest. */
+  sonderzeilen?: Record<string, SonderZeile>;
 }
 
 /**
@@ -262,6 +340,12 @@ export interface TabellenBereich {
    */
   spalten?: Spalte[];
   hoehe?: number;
+  /**
+   * Platzierungen der Tabellen-Sonderzeilen auf DIESER Seite -- `name` verweist auf
+   * `TabellenDef.sonderzeilen`. Ein `name` darf mehrfach vorkommen (z.B. Überschrift oben UND als
+   * Kopie unten): eine Inhaltsdefinition, mehrere Positionen.
+   */
+  sonderzeilen?: { name: string; y: number; y2?: number }[];
 }
 
 export interface SeitenDef {

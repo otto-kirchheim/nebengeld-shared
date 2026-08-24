@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'bun:test';
-import { FORMAT, OPS, ZEILEN_OPS, alsVergleichswert, alsZahl, alsZeitstempelMinuten, berechneZeile, datumMitFrist, operandenFelder, standardText, trifftBedingung } from '../../src/formular/aggregatoren';
+import {
+  FORMAT,
+  OPS,
+  ZEILEN_OPS,
+  alsVergleichswert,
+  alsZahl,
+  alsZeitstempelMinuten,
+  berechneZeile,
+  datumMitFrist,
+  operandenFelder,
+  standardText,
+  summeGruppe,
+  summeUeberListe,
+  trifftBedingung,
+} from '../../src/formular/aggregatoren';
 import type { Zeile } from '../../src/formular/types';
 
 describe('OPS', () => {
@@ -22,7 +36,7 @@ describe('OPS', () => {
 
 describe('FORMAT', () => {
   it('waehrung formatiert mit zwei Nachkommastellen und deutschem Komma', () => {
-    expect(FORMAT.waehrung(1234.5)).toBe('1.234,50');
+    expect(FORMAT.waehrung(1234.5)).toBe('1.234,50 €');
   });
 
   it('zahl und ganzzahl runden bzw. kürzen deutsch formatiert', () => {
@@ -349,5 +363,51 @@ describe('trifftBedingung (werte mit echtem boolean statt bereich-Umweg)', () =>
   it('werte: [false] trifft nur bei echtem false', () => {
     expect(trifftBedingung({ feld: 'aktiv', werte: [false], dann: 'X' }, { aktiv: false })).toBe(true);
     expect(trifftBedingung({ feld: 'aktiv', werte: [false], dann: 'X' }, { aktiv: true })).toBe(false);
+  });
+});
+
+describe('summeUeberListe (EZ: Summe je einzelnem Zulagen-Code über verschachtelte Listen)', () => {
+  const liste = { quelle: 'Zulagen', schluessel: 'Typ', wert: 'Wert', code: '811' };
+
+  it('summiert nur die Einträge mit passendem Schlüssel, andere Codes in derselben Liste bleiben außen vor', () => {
+    const rows: Zeile[] = [
+      { Zulagen: [{ Typ: '811', Wert: 30 }, { Typ: '818', Wert: 99 }] },
+      { Zulagen: [{ Typ: '811', Wert: 15 }] },
+    ];
+    expect(summeUeberListe(rows, liste)).toBe(45);
+  });
+
+  it('Zeilen ohne die Liste oder mit leerer Liste tragen 0 bei, statt zu werfen', () => {
+    const rows: Zeile[] = [{ Zulagen: [{ Typ: '811', Wert: 10 }] }, {}, { Zulagen: [] }];
+    expect(summeUeberListe(rows, liste)).toBe(10);
+  });
+
+  it('ein Nicht-Array unter der Quelle wird ignoriert statt abzustürzen', () => {
+    const rows: Zeile[] = [{ Zulagen: 'kaputt' }, { Zulagen: [{ Typ: '811', Wert: 5 }] }];
+    expect(summeUeberListe(rows, liste)).toBe(5);
+  });
+
+  it('leere Zeilenliste ergibt 0', () => {
+    expect(summeUeberListe([], liste)).toBe(0);
+  });
+});
+
+describe('summeGruppe (rohe Gesamtsumme ALLER Einträge einer Listen-Gruppe, unabhängig vom Code)', () => {
+  const gruppe = { quelle: 'Zulagen', wert: 'Wert' };
+
+  it('summiert alle Einträge zusammen, unabhängig vom Code', () => {
+    const rows: Zeile[] = [
+      { Zulagen: [{ Typ: '811', Wert: 30 }, { Typ: '040', Wert: 3 }] },
+      { Zulagen: [{ Typ: '811', Wert: 15 }] },
+    ];
+    expect(summeGruppe(rows, gruppe)).toBe(48);
+  });
+
+  it('nicht-Array-Quelle trägt 0 bei statt abzustürzen', () => {
+    expect(summeGruppe([{ Zulagen: 'kaputt' }], gruppe)).toBe(0);
+  });
+
+  it('leere Zeilenliste ergibt 0', () => {
+    expect(summeGruppe([], gruppe)).toBe(0);
   });
 });

@@ -84,7 +84,10 @@ export interface IDownloadEWT {
   TkgStUeber24?: boolean;
 }
 
-export type IDownloadNebengeld = Required<Omit<INebengeld, '_id' | 'EWT'>>;
+// `Arbeitszeit` (Phase 12 PDF-Vorlagen-Pipeline, siehe formular/abgeleiteteWerte.ts) ist optional,
+// damit der alte Backend-Downloadpfad (ohne diese Anreicherung) unveraendert gueltig bleibt --
+// analog zu den Phase-10/11-Feldern in IDownloadEWT/IDownloadBereitschaftszeitraum.
+export type IDownloadNebengeld = Required<Omit<INebengeld, '_id' | 'EWT'>> & { Arbeitszeit?: string };
 
 export type IDownloadEA = Required<Omit<IEntgeltausgleich, '_id' | 'EWT'>>;
 

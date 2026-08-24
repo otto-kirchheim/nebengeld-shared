@@ -18,6 +18,8 @@ export interface IVorgabeValue {
   C?: number;
   Fahrentsch?: number;
   SIPO?: number;
+  /** Satz je Ganzkörperreinigung (Code 218, Stück) -- bisher ohne Geldformel, siehe abgeleiteteWerte.ts::geldwertZulagenCode. */
+  GKR?: number;
   LRE1?: number;
   LRE2?: number;
   LRE3?: number;

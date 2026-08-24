@@ -1,7 +1,9 @@
-import type { IDownloadBereitschaftseinsatz, IDownloadBereitschaftszeitraum, IDownloadEWT } from '../download';
+import type { IDownloadBereitschaftseinsatz, IDownloadBereitschaftszeitraum, IDownloadEWT, IDownloadNebengeld } from '../download';
 import type { IVorgabeValue } from '../domain';
 import type { TarifBesoldung } from '../enums';
-import { alsMinuten, alsZeitstempelMinuten, FORMAT, ZEILEN_OPS } from './aggregatoren';
+import { ZULAGEN_CATALOG, ZulageEntryUnit } from '../zulagen';
+import { alsMinuten, alsZahl, alsZeitstempelMinuten, FORMAT, ZEILEN_OPS } from './aggregatoren';
+import type { ListenGruppe, Zeile } from './types';
 
 const STUNDE = 60;
 
@@ -105,6 +107,115 @@ export function beAbgeleiteteWerte(
     Dauer: ZEILEN_OPS.zeitdifferenz([alsMinuten(zeile.Ende), alsMinuten(zeile.Beginn)]),
     PrivatKmBetrag: Math.round(zeile.PrivatKm * privatKmSatz * 100) / 100,
   };
+}
+
+export interface EzAbgeleiteteWerte {
+  /** `"Beginn-Ende"`, z.B. `"07:00-15:45"` -- eine Spalte hat keine `Feld.quellen`/`trenner`-Verkettung. */
+  Arbeitszeit: string;
+}
+
+/**
+ * Zusammengesetzte Arbeitszeit-Anzeige für eine Nebengeld-Zeile (Phase 12 PDF-Vorlagen-Pipeline) --
+ * `Spalte` (anders als `Feld`) kann mehrere Datenpfade nicht per `quellen`/`trenner` in einer Zelle
+ * verketten, deshalb wie bei EWT/Bereitschaft vorberechnet statt im Renderer generisch gelöst.
+ */
+export function ezAbgeleiteteWerte(zeile: Pick<IDownloadNebengeld, 'Beginn' | 'Ende'>): EzAbgeleiteteWerte {
+  return { Arbeitszeit: `${zeile.Beginn}-${zeile.Ende}` };
+}
+
+type ZulagenGeldSatz = Pick<IVorgabeValue, 'A' | 'B' | 'C' | 'Fahrentsch' | 'SIPO' | 'GKR'>;
+
+/**
+ * Geldwert eines einzelnen Zulagen-Codes (Phase 12, PDF-Vorlagen-Pipeline) -- repliziert exakt die
+ * Formel aus `calculateBerechnungRows.ts::N_ZULAGEN_CALC` (Berechnung-Tab), dort je `paymentHint`
+ * auf eine ganze Kategorie (alle Codes desselben Satzes zusammen) angewandt, hier auf den Wert
+ * EINES Codes -- mehrere Codes teilen sich denselben `paymentHint`/Satz (siehe `ZULAGEN_CATALOG`).
+ * `wert` ist Minuten bei `ZulageEntryUnit.Minuten`-Codes (A/B/C/C+A/C+B/SIPO, gerundet auf volle
+ * Stunden wie im Original), sonst eine reine Stückzahl (Fahrentschädigung, C*9, Ganzkörper-
+ * reinigung). Unbekannter Code (kein Katalogeintrag) oder fehlender Satz ergibt 0 statt eines
+ * Absturzes -- Fahrlässigkeit bei der Eingabe soll keinen kaputten Export verursachen.
+ */
+export function geldwertZulagenCode(code: string, wert: number, geldMonat: ZulagenGeldSatz): number {
+  const satz = (feld: keyof ZulagenGeldSatz): number => geldMonat[feld] ?? 0;
+  switch (ZULAGEN_CATALOG.find(z => z.code === code)?.paymentHint) {
+    case 'Fahrentschaedigung':
+      return wert * satz('Fahrentsch');
+    case 'A':
+      return Math.round(wert / 60) * satz('A');
+    case 'B':
+      return Math.round(wert / 60) * satz('B');
+    case 'C':
+      return Math.round(wert / 60) * satz('C');
+    case 'C+A':
+      return Math.round(wert / 60) * (satz('C') + satz('A'));
+    case 'C+B':
+      return Math.round(wert / 60) * (satz('C') + satz('B'));
+    case 'C*9':
+      return wert * satz('C') * 9;
+    case 'SIPO':
+      return Math.round(wert / 60) * satz('SIPO');
+    case 'Ganzkoerperreinigung':
+      return wert * satz('GKR');
+    default:
+      return 0;
+  }
+}
+
+/**
+ * Bereinigte Summe [Std.] eines Zulagen-Codes (Phase 13, Sonderzeilen) -- Minuten-Codes (siehe
+ * `ZulageEntryUnit.Minuten` in `ZULAGEN_CATALOG`) gerundet auf volle Stunden, exakt wie der erste
+ * Rechenschritt in `geldwertZulagenCode()`. Stück-Codes (Fahrentschädigung, C*9, Ganzkörper-
+ * reinigung) haben keine Std.-Umrechnung -- `undefined` statt einer irreführenden Zahl, der
+ * Renderer zeigt dafür `"-"`. Unbekannter Code ebenfalls `undefined`.
+ */
+export function bereinigteZulagenStunden(code: string, wert: number): number | undefined {
+  const eintrag = ZULAGEN_CATALOG.find(z => z.code === code);
+  return eintrag?.entryRule.unit === ZulageEntryUnit.Minuten ? Math.round(wert / 60) : undefined;
+}
+
+/**
+ * Geldwert ALLER Einträge einer Listen-Gruppe zusammen (Phase 13, Sonderzeilen) -- anders als
+ * `geldwertZulagenCode()` nicht für EINEN vorgegebenen Code, sondern je Eintrag mit dessen EIGENEM
+ * Code aus `zeile[gruppe.schluessel]`: Grundlage der Gesamtsumme über alle Zulagen-Spaltenplätze
+ * einer Tabelle (`Berechnet.liste` ohne `index`), unabhängig davon, welcher Code gerade auf welchem
+ * Platz steht. Ein Eintrag ohne (String-)Code oder mit unbekanntem Code trägt `0` bei, statt die
+ * gesamte Summe zu verwerfen.
+ */
+export function summeGeldwertGruppe(rows: Zeile[], gruppe: Pick<ListenGruppe, 'quelle' | 'schluessel' | 'wert'>, geldMonat: ZulagenGeldSatz): number {
+  return rows.reduce((summe, zeile) => {
+    const eintraege = zeile[gruppe.quelle];
+    if (!Array.isArray(eintraege)) return summe;
+    return (
+      summe +
+      eintraege.reduce((s: number, e: unknown) => {
+        const eintrag = e as Zeile;
+        const code = eintrag[gruppe.schluessel];
+        return typeof code === 'string' ? s + geldwertZulagenCode(code, alsZahl(eintrag[gruppe.wert]), geldMonat) : s;
+      }, 0)
+    );
+  }, 0);
+}
+
+/**
+ * Bereinigte Summe [Std.] ALLER Einträge einer Listen-Gruppe zusammen (Phase 13, Sonderzeilen) --
+ * wie `summeGeldwertGruppe()`, aber über `bereinigteZulagenStunden()` statt `geldwertZulagenCode()`.
+ * Stück-Codes (keine Std.-Umrechnung) tragen `0` bei statt die Summe zu verwerfen -- anders als bei
+ * einer einzelnen Zelle (dort `"-"`, siehe `sonderZeileZelleWert()`) ist eine Gesamtsumme ohne den
+ * nicht umrechenbaren Anteil weiterhin eine sinnvolle Zahl.
+ */
+export function summeBereinigtGruppe(rows: Zeile[], gruppe: Pick<ListenGruppe, 'quelle' | 'schluessel' | 'wert'>): number {
+  return rows.reduce((summe, zeile) => {
+    const eintraege = zeile[gruppe.quelle];
+    if (!Array.isArray(eintraege)) return summe;
+    return (
+      summe +
+      eintraege.reduce((s: number, e: unknown) => {
+        const eintrag = e as Zeile;
+        const code = eintrag[gruppe.schluessel];
+        return typeof code === 'string' ? s + (bereinigteZulagenStunden(code, alsZahl(eintrag[gruppe.wert])) ?? 0) : s;
+      }, 0)
+    );
+  }, 0);
 }
 
 export interface BereitschaftszulageWerte {
