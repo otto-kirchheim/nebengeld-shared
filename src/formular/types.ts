@@ -180,6 +180,15 @@ export interface Feld {
   /** Zeigt `wenn.dann` nur, wenn die Bedingung zutrifft, sonst bleibt die Zelle leer. */
   wenn?: FeldBedingung;
   /**
+   * Blendet das Feld komplett aus, wenn explizit eine DIGITALE Signatur gewählt wurde (spätere
+   * externe Unterschrift zu unbekanntem Zeitpunkt) -- gedacht für das Unterschriftsdatum, das dann
+   * falsch wäre. Bei "Ohne Unterschrift" (z.B. für eine spätere Unterschrift auf Papier) bleibt das
+   * Feld dagegen sichtbar, nur "Digital" blendet es aus (siehe `Kontext.digitaleSignatur` im
+   * Frontend-Renderer). Wird über die Signatur-Fläche im FormularEditor gesetzt (siehe
+   * `FeldPanel.tsx`), nicht über die allgemeine Feldliste.
+   */
+  nurBeiSignatur?: boolean;
+  /**
    * Überschrift eines dynamischen Spaltenplatzes: zeigt den Schlüssel, der auf diesem Platz
    * gelandet ist (bei EZ den Zulagen-Code über der zugehörigen Spalte). Welcher das ist, steht
    * erst mit den Daten fest — siehe `ListenGruppe`.
