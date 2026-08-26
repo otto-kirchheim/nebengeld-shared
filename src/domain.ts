@@ -69,10 +69,10 @@ export interface IBereitschaftseinsatz {
 
 /**
  * Einsatzwechseltätigkeit (Wire-Format). `Buchungstag` bleibt hier bewusst
- * `string` (ISO-Date, wie das Backend-Modell) -- die Download-DTO
- * (`IDownloadEWT`) sendet es abweichend als zweistelligen Tages-String; diese
- * vorbestehende Diskrepanz ist dokumentiert und nicht Teil dieser Migration
- * (siehe Welle 1, `IEwtDownloadBody`). `abWE`/`ab1E`/`anEE`/`beginE`/`endeE`/
+ * `string` (ISO-Date, wie das Backend-Modell) -- der PDF-DTO
+ * (`IPdfEWT`, `frontend/infrastructure/pdf/pdfDaten.ts`) sendet es
+ * abweichend als zweistelligen Tages-String; diese vorbestehende Diskrepanz
+ * ist dokumentiert und nicht Teil dieser Migration. `abWE`/`ab1E`/`anEE`/`beginE`/`endeE`/
  * `abEE`/`an1E`/`anWE` trugen im Frontend bereits dieselben Namen wie im
  * Backend -- kein Rename nötig, nur hier mit aufgenommen.
  */
