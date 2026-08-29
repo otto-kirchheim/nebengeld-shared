@@ -35,10 +35,11 @@ export type Daten = Record<string, unknown>;
 export type Drehung = 0 | 90 | 180 | 270;
 
 /**
- * Schriftfamilie einer Zelle: `'helvetica'` | `'times'` | `'courier'` sind die Standard-14-Fonts
- * (im PDF nicht eingebettet). `'vorlage:<PostScript-Name>'` verweist auf eine in der Template-PDF
- * eingebettete Schrift (Testschritt, Extraktion siehe FormularEditor). Fehlt der Wert, gilt
- * `'helvetica'`. Als `string` typisiert, damit eingebettete Namen mitgeführt werden können.
+ * Schriftfamilie des ganzen Formulars (siehe `Layout.schriftart`): `'helvetica'` | `'times'` |
+ * `'courier'` sind die Standard-14-Fonts (im PDF nicht eingebettet). `'vorlage:<PostScript-Name>'`
+ * verweist auf eine in der Template-PDF eingebettete Schrift (Testschritt, Extraktion siehe
+ * FormularEditor). Fehlt der Wert, gilt `'helvetica'`. Als `string` typisiert, damit eingebettete
+ * Namen mitgeführt werden können. Fett/Kursiv bleiben pro Zelle (`Feld.fett`/`kursiv`).
  */
 export type Schriftart = string;
 
@@ -204,8 +205,6 @@ export interface Feld {
   listenKopf?: ListenPlatz & { tabelle: string };
   /** Dreht den Text in der Zelle; 90° liest von unten nach oben (schmale Kopfspalten). */
   drehung?: Drehung;
-  /** Schriftfamilie; ohne Angabe `'helvetica'` (siehe `Schriftart`). */
-  schriftart?: Schriftart;
   fett?: boolean;
   kursiv?: boolean;
   unterstrichen?: boolean;
@@ -270,8 +269,6 @@ export interface SonderZeileZelle {
   align?: Ausrichtung;
   /** Ohne Angabe gilt `Spalte.autoGroesse`. */
   autoGroesse?: boolean;
-  /** Ohne Angabe gilt `Spalte.schriftart`. */
-  schriftart?: Schriftart;
   /** Ohne Angabe gilt `Spalte.fett`. */
   fett?: boolean;
   /** Ohne Angabe gilt `Spalte.kursiv`. */
@@ -311,8 +308,6 @@ export interface Spalte {
   /** Dynamischer Platz aus einer `ListenGruppe` statt eines festen Zeilenfelds (siehe dort) */
   listenPlatz?: ListenPlatz;
   drehung?: Drehung;
-  /** Schriftfamilie; ohne Angabe `'helvetica'` (siehe `Schriftart`). */
-  schriftart?: Schriftart;
   fett?: boolean;
   kursiv?: boolean;
   unterstrichen?: boolean;
@@ -408,6 +403,11 @@ export interface Layout {
    * (einseitig/mehrseitig) war nur wegen Kandidat C (pyHanko-Signaturfeld-Namenskollision)
    * nötig und entfällt unter Kandidat E (siehe Plan, Phase 5). */
   template: string;
+  /**
+   * Schriftfamilie für den gesamten Fließtext des Formulars (siehe `Schriftart`). Ohne Angabe
+   * `'helvetica'`. Gilt für alle Felder, Spalten und Sonderzeilen; Fett/Kursiv bleiben pro Zelle.
+   */
+  schriftart?: Schriftart;
   /**
    * Seitenfolge des Formulars, mindestens eine Seite. Die frühere Aufteilung in `ersteSeite` +
    * `weitereSeite` reichte nicht: Bereitschaft sieht auf den Seiten 1, 2 und 3 unterschiedlich aus
