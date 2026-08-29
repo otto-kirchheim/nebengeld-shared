@@ -1,0 +1,9 @@
+# Volles Gate nur beim Push nach dev/main (siehe Repo-Struktur-Plan).
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+  case "$remote_ref" in
+    refs/heads/dev | refs/heads/main)
+      echo "husky pre-push: Gate fuer $remote_ref -- typecheck + test"
+      bun run typecheck && bun test || exit 1
+      ;;
+  esac
+done
