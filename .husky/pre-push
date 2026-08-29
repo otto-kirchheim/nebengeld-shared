@@ -1,5 +1,7 @@
 # Volles Gate nur beim Push nach dev/main (siehe Repo-Struktur-Plan).
-while read -r _local_ref _local_sha remote_ref _remote_sha; do
+while read -r _local_ref local_sha remote_ref _remote_sha; do
+  # Branch-Loeschung (local_sha = 40 Nullen) -> nichts zu pruefen
+  [ "$local_sha" = "0000000000000000000000000000000000000000" ] && continue
   case "$remote_ref" in
     refs/heads/dev | refs/heads/main)
       echo "husky pre-push: Gate fuer $remote_ref -- typecheck + test"
