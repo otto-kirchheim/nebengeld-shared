@@ -34,6 +34,14 @@ export type Daten = Record<string, unknown>;
 /** Drehung des Textes in einer Zelle, in Grad gegen den Uhrzeigersinn. */
 export type Drehung = 0 | 90 | 180 | 270;
 
+/**
+ * Schriftfamilie einer Zelle: `'helvetica'` | `'times'` | `'courier'` sind die Standard-14-Fonts
+ * (im PDF nicht eingebettet). `'vorlage:<PostScript-Name>'` verweist auf eine in der Template-PDF
+ * eingebettete Schrift (Testschritt, Extraktion siehe FormularEditor). Fehlt der Wert, gilt
+ * `'helvetica'`. Als `string` typisiert, damit eingebettete Namen mitgeführt werden können.
+ */
+export type Schriftart = string;
+
 export interface Berechnet {
   op: OpName;
   /**
@@ -196,6 +204,8 @@ export interface Feld {
   listenKopf?: ListenPlatz & { tabelle: string };
   /** Dreht den Text in der Zelle; 90° liest von unten nach oben (schmale Kopfspalten). */
   drehung?: Drehung;
+  /** Schriftfamilie; ohne Angabe `'helvetica'` (siehe `Schriftart`). */
+  schriftart?: Schriftart;
   fett?: boolean;
   kursiv?: boolean;
   unterstrichen?: boolean;
@@ -260,6 +270,8 @@ export interface SonderZeileZelle {
   align?: Ausrichtung;
   /** Ohne Angabe gilt `Spalte.autoGroesse`. */
   autoGroesse?: boolean;
+  /** Ohne Angabe gilt `Spalte.schriftart`. */
+  schriftart?: Schriftart;
   /** Ohne Angabe gilt `Spalte.fett`. */
   fett?: boolean;
   /** Ohne Angabe gilt `Spalte.kursiv`. */
@@ -299,6 +311,8 @@ export interface Spalte {
   /** Dynamischer Platz aus einer `ListenGruppe` statt eines festen Zeilenfelds (siehe dort) */
   listenPlatz?: ListenPlatz;
   drehung?: Drehung;
+  /** Schriftfamilie; ohne Angabe `'helvetica'` (siehe `Schriftart`). */
+  schriftart?: Schriftart;
   fett?: boolean;
   kursiv?: boolean;
   unterstrichen?: boolean;
@@ -360,6 +374,12 @@ export interface TabellenBereich {
 export interface SeitenDef {
   /** Index der Quellseite in der Vorlagen-PDF */
   quelle: number;
+  /**
+   * Punkt-Maße der Vorlagenseite, gegen die die Koordinaten dieser Seite gesetzt wurden. Wird vom
+   * FormularEditor beim Laden der Vorlage gefüllt und ist die Referenz für die Skalierung beim
+   * Wechsel auf eine andere Vorlage (andere Seitengröße/Auflösung). Der Renderer nutzt sie nicht.
+   */
+  groesse?: { w: number; h: number };
   /**
    * Welche Tabellen auf dieser Seite liegen und wo. Mehrere sind erlaubt (Bereitschaft trägt BZ,
    * BE/LRE 1+2 und BE/LRE 3), eine Seite ohne Datentabelle ist ebenfalls zulässig.
