@@ -35,13 +35,29 @@ export type Daten = Record<string, unknown>;
 export type Drehung = 0 | 90 | 180 | 270;
 
 /**
- * Schriftfamilie des ganzen Formulars (siehe `Layout.schriftart`): `'helvetica'` | `'times'` |
- * `'courier'` sind die Standard-14-Fonts (im PDF nicht eingebettet). `'vorlage:<PostScript-Name>'`
- * verweist auf eine in der Template-PDF eingebettete Schrift (Testschritt, Extraktion siehe
- * FormularEditor). Fehlt der Wert, gilt `'helvetica'`. Als `string` typisiert, damit eingebettete
- * Namen mitgeführt werden können. Fett/Kursiv bleiben pro Zelle (`Feld.fett`/`kursiv`).
+ * Schriftfamilie: `'helvetica'` | `'times'` | `'courier'` sind die Standard-14-Fonts (im PDF nicht
+ * eingebettet). `'vorlage:<Name>'` verweist auf eine in der Template-PDF eingebettete Schrift
+ * (Testschritt, Extraktion siehe FormularEditor). Als `string` typisiert, damit eingebettete Namen
+ * mitgeführt werden können.
  */
-export type Schriftart = string;
+export type Schriftfamilie = string;
+
+/**
+ * Schriftart des ganzen Formulars (siehe `Layout.schriftart`). Entweder eine Familie für alle vier
+ * Schnitte, oder je Schnitt eine eigene -- z.B. eine eingebettete Vorlagen-Schrift für
+ * `normal`/`fett` und Helvetica für `kursiv`, wenn die Vorlage keinen Kursiv-Schnitt mitbringt.
+ * Fehlt ein Schnitt im Objekt, gilt `normal`; fehlt auch der, gilt `'helvetica'`. Fett/Kursiv je
+ * Zelle steuert weiterhin `Feld.fett`/`kursiv` -- hier steht nur, WELCHE Schrift der jeweilige
+ * Schnitt nutzt.
+ */
+export type Schriftart =
+  | Schriftfamilie
+  | {
+      normal?: Schriftfamilie;
+      fett?: Schriftfamilie;
+      kursiv?: Schriftfamilie;
+      fettKursiv?: Schriftfamilie;
+    };
 
 export interface Berechnet {
   op: OpName;
@@ -329,6 +345,13 @@ export interface TabellenDef {
   maxZeilen: number;
   hoehe: number;
   spalten: Spalte[];
+  /**
+   * Druckt die Tabelle um diesen Winkel gedreht (gegen den Uhrzeigersinn), wenn die Vorlage das
+   * Formular gedreht zeigt. Die übrigen Werte (`startY`, `spalten[].x`, `hoehe`) bleiben im
+   * aufrechten Layout gedacht; Renderer und Editor-Vorschau drehen jede fertige Zelle um den
+   * Seitenmittelpunkt. Ohne Angabe `0`. Seiten-Override: `TabellenBereich.drehung`.
+   */
+  drehung?: Drehung;
   /** Dynamische Spaltengruppen dieser Tabelle (EZ: Erschwerniszulagen, Leistungsprämie, GKR) */
   listen?: Record<string, ListenGruppe>;
   /** Kopf-/Fußzeilen-Inhalte dieser Tabelle, adressiert über ihren Namen (siehe `SonderZeile`) --
@@ -358,6 +381,8 @@ export interface TabellenBereich {
    */
   spalten?: Spalte[];
   hoehe?: number;
+  /** Seitenspezifische Drehung; ohne Angabe gilt `TabellenDef.drehung`. */
+  drehung?: Drehung;
   /**
    * Platzierungen der Tabellen-Sonderzeilen auf DIESER Seite -- `name` verweist auf
    * `TabellenDef.sonderzeilen`. Ein `name` darf mehrfach vorkommen (z.B. Überschrift oben UND als
@@ -404,8 +429,9 @@ export interface Layout {
    * nötig und entfällt unter Kandidat E (siehe Plan, Phase 5). */
   template: string;
   /**
-   * Schriftfamilie für den gesamten Fließtext des Formulars (siehe `Schriftart`). Ohne Angabe
-   * `'helvetica'`. Gilt für alle Felder, Spalten und Sonderzeilen; Fett/Kursiv bleiben pro Zelle.
+   * Schrift für den gesamten Fließtext des Formulars (siehe `Schriftart`). Ohne Angabe `'helvetica'`.
+   * Gilt für alle Felder, Spalten und Sonderzeilen; welcher Schnitt je Zelle greift, bestimmen
+   * `Feld.fett`/`kursiv`.
    */
   schriftart?: Schriftart;
   /**
