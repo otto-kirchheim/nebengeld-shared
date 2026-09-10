@@ -387,8 +387,13 @@ export interface TabellenBereich {
    * Platzierungen der Tabellen-Sonderzeilen auf DIESER Seite -- `name` verweist auf
    * `TabellenDef.sonderzeilen`. Ein `name` darf mehrfach vorkommen (z.B. Überschrift oben UND als
    * Kopie unten): eine Inhaltsdefinition, mehrere Positionen.
+   *
+   * `ueber` überschreibt `SonderZeile.ueber` NUR für diese Platzierung ($seite/$bisher/$laufend/
+   * $alle, gleiche Werte). So trägt dieselbe benannte Summenzeile auf der ersten Seite die
+   * Gesamtsumme (`$alle`) und auf den Folgeseiten die Seitensumme (`$seite`), ohne den Inhalt zu
+   * duplizieren. Ohne Angabe gilt der Wert der Sonderzeile.
    */
-  sonderzeilen?: { name: string; y: number; y2?: number }[];
+  sonderzeilen?: { name: string; y: number; y2?: number; ueber?: string }[];
 }
 
 export interface SeitenDef {
