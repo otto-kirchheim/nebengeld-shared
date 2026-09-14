@@ -1,7 +1,7 @@
 // Domain-Modell-Typen (Welle 2) — Feldnamen folgen dem Backend-Wire-Format
 // (siehe .claude/plans/plane-das-auslagern-von-concurrent-pearl.md, Abschnitt "Welle 2").
 
-import type { LreType, TarifBesoldung } from './enums';
+import type { LreType, Role, TarifBesoldung } from './enums';
 
 /**
  * Vorgaben-Wert (Jahres-Tarife/Pauschalen). Alle Felder optional: ein
@@ -138,7 +138,7 @@ export interface IPers {
   Adress2?: string;
   ErsteTkgSt: string;
   ErsteTkgStAdresse: string;
-  Bundesland?: string;
+  Bundesland: string;
   Betrieb: string;
   /** Organisationseinheit als Hierarchie-Ebenen, z.B. ['I','IW','MI','N','KSL','IL','03'] */
   OE: string[];
@@ -177,4 +177,26 @@ export interface IEntgeltausgleich {
   Dauer: string; // "HH:mm"
   Taetigkeit: string;
   Entgeltgruppe: string;
+}
+
+/**
+ * Sicherer User-Wire-Ausschnitt für die Admin-Verwaltung (`GET/PUT /users`) -- NUR die Felder, die
+ * das Backend tatsächlich ausliefert (Mongoose `toJSON.transform` in `User.ts` streicht Passwort,
+ * Tokens, Sessions, Passkeys zur Laufzeit). Das Backend hat dafür kein eigenes DTO -- Controller
+ * reichen das volle `IUser`-Document durch `sendSuccess()`, die Feldliste hier ist also der einzige
+ * geprüfte Vertrag für dieses Wire-Format, nicht durch einen zweiten Backend-Typ abgesichert.
+ */
+export interface IUserAdminRow {
+  _id: string;
+  userName: string;
+  email?: string;
+  emailVerified?: boolean;
+  role: Role;
+  adminForTeamOes?: string[];
+  adminForOrganizationOes?: string[];
+  canEditVorgabenGeld?: boolean;
+  canEditProfileTemplates?: boolean;
+  canEditOwnTeamTemplatesOnly?: boolean;
+  canCreateFormularVorlagen?: boolean;
+  canEditFormularVorlagen?: boolean;
 }
