@@ -463,4 +463,30 @@ export interface Formular {
   versionen: Version[];
 }
 
+/**
+ * Wire-Format der Admin-Versionsverwaltung (`GET/POST/PUT /formulare/:f/versionen`) -- flaches
+ * `vorlageId` statt der im Renderer aufgelösten `Layout.template`-URL, `konfig`/`tabellen` bewusst
+ * lose typisiert: das Frontend verschärft sie lokal auf `Konfig` (FormularEditor), das Backend
+ * validiert sie separat über `formular.schemas.ts` (siehe Typsystem-Spiegel, `.claude/CLAUDE.md`).
+ */
+export interface VersionUebersicht {
+  id: string;
+  version: string;
+  gueltigVon: string;
+  gueltigBis: string | null;
+  vorlageId: string;
+  konfig: Record<string, unknown>;
+  tabellen: Record<string, unknown>;
+}
+
+/** Eingabeformat für Anlegen/Ändern einer Version -- wie `VersionUebersicht`, aber ohne `id`. */
+export interface VersionNutzdaten {
+  version: string;
+  gueltigVon: string;
+  gueltigBis: string | null;
+  vorlageId: string;
+  konfig: Record<string, unknown>;
+  tabellen: Record<string, unknown>;
+}
+
 export type Registry = Record<string, Formular>;
