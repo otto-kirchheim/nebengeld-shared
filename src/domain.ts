@@ -1,7 +1,7 @@
 // Domain-Modell-Typen (Welle 2) — Feldnamen folgen dem Backend-Wire-Format
 // (siehe .claude/plans/plane-das-auslagern-von-concurrent-pearl.md, Abschnitt "Welle 2").
 
-import type { LreType, Role, TarifBesoldung } from './enums';
+import type { BereitschaftSchichtTyp, LreType, Role, TarifBesoldung } from './enums';
 
 /**
  * Vorgaben-Wert (Jahres-Tarife/Pauschalen). Alle Felder optional: ein
@@ -158,6 +158,43 @@ export interface IFahrzeit {
   key: string;
   text: string;
   value: string;
+}
+
+/**
+ * Zeitpunkt innerhalb eines Bereitschafts-VorgabenB-Eintrags (`beginnB`/`endeB`/`beginnN`/`endeN`).
+ * `Nwoche` markiert, ob dieser Punkt in die ISO-Folgewoche fällt -- optional im Wire-Format, weil
+ * das Frontend (`IVorgabenUvorgabenB`, `core/types/IVorgabenU.ts`) es für `endeB`/`beginnN`/`endeN`
+ * immer mitschickt, für `beginnB` (Referenzpunkt des Zeitraums, kann trivial nicht "nächste Woche"
+ * sein) dagegen bewusst NIE -- dieselbe Art Optionalitäts-Divergenz wie bei `IPers`, hier aber
+ * strukturell begründet statt Versehen, deshalb hier absichtlich optional statt vereinheitlicht.
+ */
+export interface IZeitpunktMitWoche {
+  tag: number;
+  zeit?: string;
+  Nwoche?: boolean;
+}
+
+/**
+ * Wert eines `VorgabenB`-Eintrags (Bereitschafts-Arbeitszeitvorgabe). `schichtenOverrides` bleibt
+ * bewusst lose (`Record<string, unknown>`) -- das Frontend hält dafür eine stärker typisierte Form
+ * (`Partial<IPerWeekdaySchicht>` je `BereitschaftSchichtTyp`), siehe `IVorgabenUvorgabenB`.
+ */
+export interface IVorgabeBWert {
+  Name: string;
+  beginnB: IZeitpunktMitWoche;
+  endeB: IZeitpunktMitWoche;
+  schichten?: BereitschaftSchichtTyp[];
+  schichtenOverrides?: Record<string, unknown>;
+  /** DEPRECATED — Fallback für alte Einträge; wird bei Migration auf `schichten: ['nacht']` gemappt. */
+  nacht: boolean;
+  beginnN: IZeitpunktMitWoche;
+  endeN: IZeitpunktMitWoche;
+  standard?: boolean;
+}
+
+export interface IVorgabeBEntry {
+  key: string;
+  value: IVorgabeBWert;
 }
 
 /**
