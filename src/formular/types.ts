@@ -83,7 +83,8 @@ export interface Berechnet {
   /**
    * Summe über einen dynamischen Spaltenplatz (siehe `Feld.listenKopf`/`ListenPlatz`), NICHT über
    * einen festen Code: welcher Zulagen-Code an Platz `index` einer Gruppe landet, steht erst mit den
-   * Daten des Monats fest (`schluesselAufPlatz()`/`listenBelegung()` in `listen.ts`) -- ein fest
+   * Daten des Monats fest (`schluesselAufPlatz()`/`listenBelegung()`, Frontend-Renderer
+   * `infrastructure/pdf/listen.ts`) -- ein fest
    * eingetragener Code würde von Monat zu Monat an der Spaltenüberschrift vorbeirechnen, sobald sich
    * die Platzbelegung verschiebt (z.B. weil ein Code diesen Monat gar nicht vorkommt). Summiert wird
    * deshalb IMMER über denselben, zur Laufzeit aufgelösten Code wie die zugehörige Kopfzeile. Nur
