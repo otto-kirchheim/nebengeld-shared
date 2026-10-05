@@ -20,6 +20,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "bun test",
+    "deploy": "bash ./scripts/deploy.sh",
+    "deploy:dry": "bash ./scripts/deploy.sh --dry-run",
     "prepare": "husky"
   },
   "devDependencies": {
