@@ -1,48 +1,47 @@
 #!/usr/bin/env bash
 # =============================================================================
-# deploy.sh – shared von `dev` nach `main` freigeben
+# deploy.sh – shared releasen: Version anheben und `dev` nach `main` freigeben
 #
 # Produktions-Builds von frontend und backend duerfen nur shared-Staende nutzen, die auf `main`
-# liegen (deren deploy.sh bricht sonst ab). Deshalb vor jedem frontend-/backend-Deploy mit
-# shared-Aenderungen zuerst dieses Skript ausfuehren.
+# liegen (deren deploy.sh bricht sonst ab). `main` waechst nur per Release, also immer mit
+# angehobener Version. Der Root-`release.sh` ruft dieses Skript vor frontend/backend auf.
 #
 # Standardablauf:
-#   1. `dev` aktualisieren und Checks ausfuehren (typecheck + test)
-#   2. `dev` nach `main` mergen (--no-ff)
-#   3. `main` pushen
-#   4. zurueck auf `dev` wechseln und auf den neuen Stand fast-forwarden
+#   1. `dev` aktualisieren; ohne neue Commits gegenueber `main` Abbruch (nichts zu releasen)
+#   2. Checks (typecheck + test)
+#   3. Version in package.json anheben, Release-Commit auf `dev`
+#   4. `dev` nach `main` mergen (--no-ff), beide Branches pushen, zurueck auf `dev`
 #
 # Verwendung:
-#   ./scripts/deploy.sh
-#   ./scripts/deploy.sh --dry-run
-#   ./scripts/deploy.sh --skip-checks
+#   ./scripts/deploy.sh <patch|minor|major> [--dry-run] [--skip-checks] [--no-push]
 # =============================================================================
 
 set -euo pipefail
 
 REMOTE="${REMOTE:-origin}"
-SOURCE_BRANCH="${SOURCE_BRANCH:-dev}"
-TARGET_BRANCH="${TARGET_BRANCH:-main}"
+SOURCE_BRANCH="dev"
+TARGET_BRANCH="main"
+BUMP_TYPE=""
 RUN_CHECKS=true
 PUSH_CHANGES=true
 DRY_RUN=false
 
 usage() {
   cat <<EOF
-Usage: ./scripts/deploy.sh [options]
+Usage: ./scripts/deploy.sh <patch|minor|major> [options]
 
-Merges ${SOURCE_BRANCH} into ${TARGET_BRANCH} (--no-ff), pushes both branches to ${REMOTE}
-and switches back to ${SOURCE_BRANCH}.
+Bumps the version on ${SOURCE_BRANCH}, merges ${SOURCE_BRANCH} into ${TARGET_BRANCH} (--no-ff),
+pushes both branches to ${REMOTE} and switches back to ${SOURCE_BRANCH}.
 
 Options:
   --skip-checks       Skip typecheck + test
-  --no-push           Prepare merge locally without pushing branches
+  --no-push           Prepare release locally without pushing branches
   --dry-run           Show commands only, do not change anything
   -h, --help          Show this help
 EOF
 }
 
-# Die Pushes unten ohne Husky-Gate: die Checks liefen hier bereits (oder wurden bewusst uebersprungen).
+# Die Commits/Pushes unten ohne Husky-Gate: die Checks liefen hier bereits (oder wurden bewusst uebersprungen).
 export HUSKY=0
 
 run_cmd() {
@@ -54,6 +53,7 @@ run_cmd() {
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    patch|minor|major) BUMP_TYPE="$1" ;;
     --skip-checks) RUN_CHECKS=false ;;
     --no-push) PUSH_CHANGES=false ;;
     --dry-run) DRY_RUN=true ;;
@@ -71,6 +71,12 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
+if [[ -z "$BUMP_TYPE" ]]; then
+  echo "❌ Release-Typ fehlt: patch, minor oder major." >&2
+  usage >&2
+  exit 1
+fi
+
 cd "$(dirname "$0")/.."
 
 for branch in "$SOURCE_BRANCH" "$TARGET_BRANCH"; do
@@ -85,20 +91,48 @@ if ! git diff --quiet || ! git diff --cached --quiet; then
   exit 1
 fi
 
-echo "🚀 Deploying shared from '$SOURCE_BRANCH' to '$TARGET_BRANCH' via '$REMOTE'"
+echo "🚀 Releasing shared (${BUMP_TYPE}) from '$SOURCE_BRANCH' to '$TARGET_BRANCH' via '$REMOTE'"
 
 run_cmd git fetch "$REMOTE"
 run_cmd git checkout "$SOURCE_BRANCH"
 run_cmd git pull --ff-only "$REMOTE" "$SOURCE_BRANCH"
+
+NEUE_COMMITS="$(git rev-list --count "${REMOTE}/${TARGET_BRANCH}..${SOURCE_BRANCH}")"
+if [[ "$NEUE_COMMITS" -eq 0 ]]; then
+  echo "ℹ️ Keine neuen Commits auf '${SOURCE_BRANCH}' gegenueber '${TARGET_BRANCH}' -- nichts zu releasen."
+  exit 0
+fi
 
 if [[ "$RUN_CHECKS" == true ]]; then
   run_cmd bun run typecheck
   run_cmd bun test
 fi
 
+pkg_version() { { grep -m1 -oE '"version": *"[^"]+"' || true; } | sed -E 's/.*"([^"]+)"$/\1/'; }
+VERSION_ALT="$(pkg_version < package.json)"
+VERSION_PROD="$(git show "${REMOTE}/${TARGET_BRANCH}:package.json" | pkg_version)"
+
+if [[ "$VERSION_ALT" != "$VERSION_PROD" ]]; then
+  # Abgebrochener Release: Bump-Commit existiert schon, nur Merge/Push nachholen.
+  VERSION_NEU="$VERSION_ALT"
+  echo "ℹ️ Version ${VERSION_NEU} ist schon angehoben (${TARGET_BRANCH}: ${VERSION_PROD}) – Release wird fortgesetzt"
+else
+  IFS='.' read -r MAJOR MINOR PATCH <<<"$VERSION_ALT"
+  case "$BUMP_TYPE" in
+    major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+    minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+    patch) PATCH=$((PATCH + 1)) ;;
+  esac
+  VERSION_NEU="${MAJOR}.${MINOR}.${PATCH}"
+  echo "📦 Version ${VERSION_ALT} -> ${VERSION_NEU} (${NEUE_COMMITS} Commits)"
+
+  run_cmd sed -i -E "0,/\"version\": *\"[^\"]+\"/s//\"version\": \"${VERSION_NEU}\"/" package.json
+  run_cmd git commit -am "chore(release): bump version to ${VERSION_NEU}"
+fi
+
 run_cmd git checkout "$TARGET_BRANCH"
 run_cmd git pull --ff-only "$REMOTE" "$TARGET_BRANCH"
-run_cmd git merge --no-ff "$SOURCE_BRANCH" -m "chore: deploy ${SOURCE_BRANCH} to ${TARGET_BRANCH}"
+run_cmd git merge --no-ff "$SOURCE_BRANCH" -m "chore: deploy ${SOURCE_BRANCH} to ${TARGET_BRANCH} (v${VERSION_NEU})"
 
 if [[ "$PUSH_CHANGES" == true ]]; then
   run_cmd git push "$REMOTE" "$TARGET_BRANCH"
@@ -111,4 +145,4 @@ if [[ "$PUSH_CHANGES" == true ]]; then
   run_cmd git push "$REMOTE" "$SOURCE_BRANCH"
 fi
 
-echo "✅ Done. shared '$TARGET_BRANCH' ist freigegeben; frontend/backend koennen jetzt deployt werden."
+echo "✅ shared ${VERSION_NEU} ist auf '${TARGET_BRANCH}' freigegeben; frontend/backend koennen jetzt releasen."
