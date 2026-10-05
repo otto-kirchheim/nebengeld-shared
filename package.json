@@ -2,7 +2,7 @@
   "name": "@otto-kirchheim/nebengeld-shared",
   "version": "0.8.0",
   "description": "Gemeinsame Typen, Enums und Konstanten fuer DB-Nebengeld Backend + Frontend",
-  "license": "UNLICENSED",
+  "license": "MIT",
   "private": false,
   "type": "module",
   "main": "src/index.ts",
