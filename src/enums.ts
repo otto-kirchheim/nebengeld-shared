@@ -43,3 +43,6 @@ export type SaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error' | 'bl
 
 // ─── Wochentag (isoWeekday 1–7) ──────────────────────────
 export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+
+// ─── Bereitschafts-Schichttyp (VorgabenB.schichten) ──────
+export type BereitschaftSchichtTyp = 'frueh' | 'spaet' | 'nacht' | 'sonder';

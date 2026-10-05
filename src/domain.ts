@@ -1,7 +1,7 @@
 // Domain-Modell-Typen (Welle 2) — Feldnamen folgen dem Backend-Wire-Format
 // (siehe .claude/plans/plane-das-auslagern-von-concurrent-pearl.md, Abschnitt "Welle 2").
 
-import type { LreType, TarifBesoldung } from './enums';
+import type { BereitschaftSchichtTyp, LreType, Role, TarifBesoldung } from './enums';
 
 /**
  * Vorgaben-Wert (Jahres-Tarife/Pauschalen). Alle Felder optional: ein
@@ -18,6 +18,8 @@ export interface IVorgabeValue {
   C?: number;
   Fahrentsch?: number;
   SIPO?: number;
+  /** Satz je Ganzkörperreinigung (Code 218, Stück) -- bisher ohne Geldformel, siehe abgeleiteteWerte.ts::geldwertZulagenCode. */
+  GKR?: number;
   LRE1?: number;
   LRE2?: number;
   LRE3?: number;
@@ -67,10 +69,10 @@ export interface IBereitschaftseinsatz {
 
 /**
  * Einsatzwechseltätigkeit (Wire-Format). `Buchungstag` bleibt hier bewusst
- * `string` (ISO-Date, wie das Backend-Modell) -- die Download-DTO
- * (`IDownloadEWT`) sendet es abweichend als zweistelligen Tages-String; diese
- * vorbestehende Diskrepanz ist dokumentiert und nicht Teil dieser Migration
- * (siehe Welle 1, `IEwtDownloadBody`). `abWE`/`ab1E`/`anEE`/`beginE`/`endeE`/
+ * `string` (ISO-Date, wie das Backend-Modell) -- der PDF-DTO
+ * (`IPdfEWT`, `frontend/infrastructure/pdf/pdfDaten.ts`) sendet es
+ * abweichend als zweistelligen Tages-String; diese vorbestehende Diskrepanz
+ * ist dokumentiert und nicht Teil dieser Migration. `abWE`/`ab1E`/`anEE`/`beginE`/`endeE`/
  * `abEE`/`an1E`/`anWE` trugen im Frontend bereits dieselben Namen wie im
  * Backend -- kein Rename nötig, nur hier mit aufgenommen.
  */
@@ -136,7 +138,7 @@ export interface IPers {
   Adress2?: string;
   ErsteTkgSt: string;
   ErsteTkgStAdresse: string;
-  Bundesland?: string;
+  Bundesland: string;
   Betrieb: string;
   /** Organisationseinheit als Hierarchie-Ebenen, z.B. ['I','IW','MI','N','KSL','IL','03'] */
   OE: string[];
@@ -159,6 +161,43 @@ export interface IFahrzeit {
 }
 
 /**
+ * Zeitpunkt innerhalb eines Bereitschafts-VorgabenB-Eintrags (`beginnB`/`endeB`/`beginnN`/`endeN`).
+ * `Nwoche` markiert, ob dieser Punkt in die ISO-Folgewoche fällt -- optional im Wire-Format, weil
+ * das Frontend (`IVorgabenUvorgabenB`, `core/types/IVorgabenU.ts`) es für `endeB`/`beginnN`/`endeN`
+ * immer mitschickt, für `beginnB` (Referenzpunkt des Zeitraums, kann trivial nicht "nächste Woche"
+ * sein) dagegen bewusst NIE -- dieselbe Art Optionalitäts-Divergenz wie bei `IPers`, hier aber
+ * strukturell begründet statt Versehen, deshalb hier absichtlich optional statt vereinheitlicht.
+ */
+export interface IZeitpunktMitWoche {
+  tag: number;
+  zeit?: string;
+  Nwoche?: boolean;
+}
+
+/**
+ * Wert eines `VorgabenB`-Eintrags (Bereitschafts-Arbeitszeitvorgabe). `schichtenOverrides` bleibt
+ * bewusst lose (`Record<string, unknown>`) -- das Frontend hält dafür eine stärker typisierte Form
+ * (`Partial<IPerWeekdaySchicht>` je `BereitschaftSchichtTyp`), siehe `IVorgabenUvorgabenB`.
+ */
+export interface IVorgabeBWert {
+  Name: string;
+  beginnB: IZeitpunktMitWoche;
+  endeB: IZeitpunktMitWoche;
+  schichten?: BereitschaftSchichtTyp[];
+  schichtenOverrides?: Record<string, unknown>;
+  /** DEPRECATED — Fallback für alte Einträge; wird bei Migration auf `schichten: ['nacht']` gemappt. */
+  nacht: boolean;
+  beginnN: IZeitpunktMitWoche;
+  endeN: IZeitpunktMitWoche;
+  standard?: boolean;
+}
+
+export interface IVorgabeBEntry {
+  key: string;
+  value: IVorgabeBWert;
+}
+
+/**
  * Entgeltausgleich (Wire-Format, §6 FGrTV). `Dauer` ist eine reine
  * `"HH:mm"`-Zeitspanne (geleistete höherwertige Arbeitszeit), kein
  * `Beginn`/`Ende`-Paar wie bei Nebengeld -- siehe Hinweis bei
@@ -175,4 +214,26 @@ export interface IEntgeltausgleich {
   Dauer: string; // "HH:mm"
   Taetigkeit: string;
   Entgeltgruppe: string;
+}
+
+/**
+ * Sicherer User-Wire-Ausschnitt für die Admin-Verwaltung (`GET/PUT /users`) -- NUR die Felder, die
+ * das Backend tatsächlich ausliefert (Mongoose `toJSON.transform` in `User.ts` streicht Passwort,
+ * Tokens, Sessions, Passkeys zur Laufzeit). Das Backend hat dafür kein eigenes DTO -- Controller
+ * reichen das volle `IUser`-Document durch `sendSuccess()`, die Feldliste hier ist also der einzige
+ * geprüfte Vertrag für dieses Wire-Format, nicht durch einen zweiten Backend-Typ abgesichert.
+ */
+export interface IUserAdminRow {
+  _id: string;
+  userName: string;
+  email?: string;
+  emailVerified?: boolean;
+  role: Role;
+  adminForTeamOes?: string[];
+  adminForOrganizationOes?: string[];
+  canEditVorgabenGeld?: boolean;
+  canEditProfileTemplates?: boolean;
+  canEditOwnTeamTemplatesOnly?: boolean;
+  canCreateFormularVorlagen?: boolean;
+  canEditFormularVorlagen?: boolean;
 }
