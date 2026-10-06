@@ -1,6 +1,6 @@
 {
   "name": "@otto-kirchheim/nebengeld-shared",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "description": "Gemeinsame Typen, Enums und Konstanten fuer DB-Nebengeld Backend + Frontend",
   "license": "MIT",
   "private": false,
@@ -10,9 +10,6 @@
   "files": [
     "src"
   ],
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/otto-kirchheim/nebengeld-shared.git"
