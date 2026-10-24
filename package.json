@@ -15,7 +15,7 @@
     "url": "git+https://github.com/otto-kirchheim/nebengeld-shared.git"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check",
     "test": "bun test",
     "release:patch": "bash ./scripts/deploy.sh patch",
     "release:minor": "bash ./scripts/deploy.sh minor",
