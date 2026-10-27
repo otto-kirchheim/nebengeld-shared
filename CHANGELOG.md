@@ -2,6 +2,12 @@
 
 Dieses Changelog dokumentiert Aenderungen am Shared-Paket `@otto-kirchheim/nebengeld-shared`.
 
+## 2026-10-27 (2)
+
+### feat (`scripts/deploy.sh --force`)
+
+- Neue Option `--force`: releast auch ohne Aenderung unter `src/` (z. B. Dependency-/Skript-Updates), damit frontend/backend einen `main`-Stand statt eines dev-Pins nutzen. Ohne `--force` unveraendert: kein Release ohne `src/`-Aenderung. Root-`release.sh` fragt in Schritt 2 danach.
+
 ## 2026-10-27 (1)
 
 ### chore (Dependency-Update)
