@@ -3,17 +3,19 @@
 # deploy.sh – shared releasen: Version anheben und `dev` nach `main` freigeben
 #
 # Produktions-Builds von frontend und backend duerfen nur shared-Staende nutzen, die auf `main`
-# liegen (deren deploy.sh bricht sonst ab). `main` waechst nur per Release, also immer mit
+# liegen oder dasselbe `src/` wie `main` haben (deren deploy.sh bricht sonst ab). `main` waechst nur per Release, also immer mit
 # angehobener Version. Der Root-`release.sh` ruft dieses Skript vor frontend/backend auf.
 #
 # Standardablauf:
-#   1. `dev` aktualisieren; ohne neue Commits gegenueber `main` Abbruch (nichts zu releasen)
+#   1. `dev` aktualisieren; ohne Aenderung unter `src/` gegenueber `main` Abbruch (nichts zu releasen --
+#      frontend/backend akzeptieren einen dev-Pin, solange dessen `src/` mit `main` identisch ist);
+#      `--force` releast trotzdem (z. B. Dependency-/Skript-Updates sollen auf `main`)
 #   2. Checks (typecheck + test)
 #   3. Version in package.json anheben, Release-Commit auf `dev`
 #   4. `dev` nach `main` mergen (--no-ff), beide Branches pushen, zurueck auf `dev`
 #
 # Verwendung:
-#   ./scripts/deploy.sh <patch|minor|major> [--dry-run] [--skip-checks] [--no-push]
+#   ./scripts/deploy.sh <patch|minor|major> [--dry-run] [--skip-checks] [--no-push] [--force]
 # =============================================================================
 
 set -euo pipefail
@@ -25,6 +27,7 @@ BUMP_TYPE=""
 RUN_CHECKS=true
 PUSH_CHANGES=true
 DRY_RUN=false
+FORCE=false
 
 usage() {
   cat <<EOF
@@ -37,6 +40,7 @@ Options:
   --skip-checks       Skip typecheck + test
   --no-push           Prepare release locally without pushing branches
   --dry-run           Show commands only, do not change anything
+  --force             Release even without changes under src/
   -h, --help          Show this help
 EOF
 }
@@ -57,6 +61,7 @@ while [[ $# -gt 0 ]]; do
     --skip-checks) RUN_CHECKS=false ;;
     --no-push) PUSH_CHANGES=false ;;
     --dry-run) DRY_RUN=true ;;
+    --force) FORCE=true ;;
     -h|--help)
       usage
       exit 0
@@ -101,6 +106,16 @@ NEUE_COMMITS="$(git rev-list --count "${REMOTE}/${TARGET_BRANCH}..${SOURCE_BRANC
 if [[ "$NEUE_COMMITS" -eq 0 ]]; then
   echo "ℹ️ Keine neuen Commits auf '${SOURCE_BRANCH}' gegenueber '${TARGET_BRANCH}' -- nichts zu releasen."
   exit 0
+fi
+
+# Nur `src/` kommt bei frontend/backend an. Commits ohne src-Aenderung (CI, Doku, Skripte) bekommen keine
+# eigene Version; sie gehen mit dem naechsten echten Release nach main -- ausser mit `--force`.
+if git diff --quiet "${REMOTE}/${TARGET_BRANCH}" "$SOURCE_BRANCH" -- src; then
+  if [[ "$FORCE" != true ]]; then
+    echo "ℹ️ ${NEUE_COMMITS} Commits auf '${SOURCE_BRANCH}', aber keine Aenderung unter src/ -- nichts zu releasen."
+    exit 0
+  fi
+  echo "ℹ️ Keine Aenderung unter src/, Release erzwungen (--force)."
 fi
 
 if [[ "$RUN_CHECKS" == true ]]; then

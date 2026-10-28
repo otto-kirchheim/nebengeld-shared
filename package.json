@@ -1,6 +1,6 @@
 {
   "name": "@otto-kirchheim/nebengeld-shared",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "Gemeinsame Typen, Enums und Konstanten fuer DB-Nebengeld Backend + Frontend",
   "license": "MIT",
   "private": false,
@@ -15,7 +15,7 @@
     "url": "git+https://github.com/otto-kirchheim/nebengeld-shared.git"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check",
     "test": "bun test",
     "release:patch": "bash ./scripts/deploy.sh patch",
     "release:minor": "bash ./scripts/deploy.sh minor",
@@ -24,7 +24,7 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@types/bun": "^1.4.0",
+    "@types/bun": "^1.4.4",
     "husky": "^9.1.7",
     "typescript": "^6.0.3"
   }
