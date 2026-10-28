@@ -2,6 +2,14 @@
 
 Dieses Changelog dokumentiert Aenderungen am Shared-Paket `@otto-kirchheim/nebengeld-shared`.
 
+## 2026-10-28 (3)
+
+### feat (`IUserAdminRow.adminForStuetzpunkte`)
+
+- Neues optionales Feld `adminForStuetzpunkte?: string[]` im Admin-Wire-Typ: zusaetzliche
+  Stuetzpunkt-Einschraenkung (Abgleich gegen `Pers.ErsteTkgSt`) fuer Team-Admins und den
+  Team-Bereich von Org-Admins.
+
 ## 2026-10-27 (2)
 
 ### feat (`scripts/deploy.sh --force`)
