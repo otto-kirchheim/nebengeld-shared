@@ -2,6 +2,16 @@
 
 Dieses Changelog dokumentiert Aenderungen am Shared-Paket `@otto-kirchheim/nebengeld-shared`.
 
+## 2026-10-29 (4)
+
+### feat (PDF-Formate als Muster)
+
+- `FormatName` entfaellt; `Feld`/`Spalte`/`SonderZeileZelle.format` sind jetzt `Format` (Freitext).
+- Neu `formular/format.ts`: `pruefeFormat` (Art `schluessel`/`zahl`/`datum` oder Fehlermeldung),
+  `zerlegeZahlenmuster` (Tausendertrenner `.` oder Leerzeichen, Gruppengroesse aus dem Muster), `datumTokens`, `findeFormatPlatzhalter`, `sammleFormatFehler`,
+  `FORMAT_SCHLUESSEL` (`@liste`, `@grossbuchstaben`, `@jaNein`, `@oe`) und `ALTE_FORMATE`
+  (alter Name -> Muster, fuer Migration und Fehlermeldung).
+
 ## 2026-10-28 (3)
 
 ### feat (`IUserAdminRow.adminForStuetzpunkte`)
