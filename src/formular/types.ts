@@ -1,25 +1,9 @@
 // Typsystem für die PDF-Vorlagen-Pipeline (Zulagenzettel/EZ, EWT, Bereitschaft, EA).
 // Konfiguration (Registry) ist die Serialisierung genau dieser Struktur.
 
+import type { Format } from './format';
+
 export type Ausrichtung = 'links' | 'rechts' | 'zentriert';
-export type FormatName =
-  | 'waehrung'
-  | 'zahl'
-  | 'ganzzahl'
-  | 'datum'
-  | 'datumKurz'
-  | 'tag'
-  | 'tagZweistellig'
-  | 'wochentag'
-  | 'monatJahr'
-  | 'monatName'
-  | 'monatNameKurz'
-  | 'uhrzeit'
-  | 'stunden'
-  | 'liste'
-  | 'grossbuchstaben'
-  | 'jaNein'
-  | 'oe';
 export type OpName = 'summe' | 'anzahl' | 'max' | 'letztesDatum';
 export type ZeilenOpName = 'produkt' | 'summe' | 'differenz' | 'quotient' | 'zeitdifferenz' | 'zeitspanne';
 
@@ -184,7 +168,7 @@ export interface Feld {
   /** bricht an Wortgrenzen auf mehrere Zeilen um (braucht `x2`) */
   umbruch?: boolean;
   align?: Ausrichtung;
-  format?: FormatName;
+  format?: Format;
   berechnet?: Berechnet;
   /**
    * Fester Text statt Datenpfad-Auflösung. Platzhalter in geschweiften Klammern werden ersetzt:
@@ -278,7 +262,7 @@ export interface SonderZeileZelle {
   art: SonderZeileArt;
   /** Ohne Angabe gilt `Spalte.format` -- eine Summen-/€-Zeile braucht praktisch immer ein eigenes,
    *  weil die Spalte selbst den Rohwert unformatiert zeigt. */
-  format?: FormatName;
+  format?: Format;
   /** Ohne Angabe gilt `Spalte.size` -- eine Summenzeile will oft eine andere Schriftgröße als die
    *  Datenzeilen (z.B. fett/größer für die Gesamtsumme). */
   size?: number;
@@ -317,7 +301,7 @@ export interface Spalte {
   autoGroesse?: boolean;
   umbruch?: boolean;
   align?: Ausrichtung;
-  format?: FormatName;
+  format?: Format;
   maxBreite?: number;
   berechnet?: ZeilenBerechnet;
   /** Ankreuz-Spalte: nur befüllt, wenn die Bedingung zutrifft (siehe `Bedingung`) */
