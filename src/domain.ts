@@ -231,6 +231,7 @@ export interface IUserAdminRow {
   role: Role;
   adminForTeamOes?: string[];
   adminForOrganizationOes?: string[];
+  adminForStuetzpunkte?: string[];
   canEditVorgabenGeld?: boolean;
   canEditProfileTemplates?: boolean;
   canEditOwnTeamTemplatesOnly?: boolean;
